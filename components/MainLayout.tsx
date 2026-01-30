@@ -33,7 +33,7 @@ interface LayoutProps {
   children?: React.ReactNode;
 }
 
-export const AppLayout: React.FC<LayoutProps> = ({ children }) => {
+export const MainLayout: React.FC<LayoutProps> = ({ children }) => {
   const { user, logout } = React.useContext(AuthContext);
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const location = useLocation();

@@ -1,6 +1,7 @@
+// Build timestamp: 2026-01-30 23:15
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { AppLayout as Layout } from './components/AppLayout';
+import { MainLayout } from './components/MainLayout';
 import { Dashboard } from './components/Dashboard';
 import { Inventory } from './components/Inventory';
 import { Bookings } from './components/Bookings';
@@ -117,97 +118,97 @@ export default function App() {
 
             <Route path="/" element={
               <RoleBasedRoute allowedRoles={[UserRole.ADMIN, UserRole.MANAGER, UserRole.FINANCE, UserRole.CASHIER, UserRole.VIEWER, UserRole.SALES]}>
-                <Layout>
+                <MainLayout>
                   <Dashboard />
-                </Layout>
+                </MainLayout>
               </RoleBasedRoute>
             } />
 
             <Route path="/inventory" element={
               <RoleBasedRoute allowedRoles={[UserRole.ADMIN, UserRole.MANAGER, UserRole.FINANCE, UserRole.SALES]}>
-                <Layout>
+                <MainLayout>
                   <Inventory />
-                </Layout>
+                </MainLayout>
               </RoleBasedRoute>
             } />
 
             <Route path="/inventory/add" element={
               <RoleBasedRoute allowedRoles={[UserRole.ADMIN, UserRole.MANAGER, UserRole.FINANCE, UserRole.SALES]}>
-                <Layout>
+                <MainLayout>
                   <Inventory />
-                </Layout>
+                </MainLayout>
               </RoleBasedRoute>
             } />
 
             <Route path="/bookings" element={
               <RoleBasedRoute allowedRoles={[UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.FINANCE, UserRole.SALES]}>
-                <Layout>
+                <MainLayout>
                   <Bookings />
-                </Layout>
+                </MainLayout>
               </RoleBasedRoute>
             } />
 
             <Route path="/bookings/new" element={
               <RoleBasedRoute allowedRoles={[UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.FINANCE, UserRole.SALES]}>
-                <Layout>
+                <MainLayout>
                   <Bookings />
-                </Layout>
+                </MainLayout>
               </RoleBasedRoute>
             } />
 
             <Route path="/customers" element={
               <RoleBasedRoute allowedRoles={[UserRole.ADMIN, UserRole.MANAGER, UserRole.FINANCE, UserRole.SALES]}>
-                <Layout>
+                <MainLayout>
                   <Customers />
-                </Layout>
+                </MainLayout>
               </RoleBasedRoute>
             } />
 
             <Route path="/customers/add" element={
               <RoleBasedRoute allowedRoles={[UserRole.ADMIN, UserRole.MANAGER, UserRole.FINANCE, UserRole.SALES]}>
-                <Layout>
+                <MainLayout>
                   <Customers />
-                </Layout>
+                </MainLayout>
               </RoleBasedRoute>
             } />
 
             <Route path="/finance" element={
               <RoleBasedRoute allowedRoles={[UserRole.ADMIN, UserRole.MANAGER, UserRole.FINANCE]}>
-                <Layout>
+                <MainLayout>
                   <Finance />
-                </Layout>
+                </MainLayout>
               </RoleBasedRoute>
             } />
 
             <Route path="/finance/new" element={
               <RoleBasedRoute allowedRoles={[UserRole.ADMIN, UserRole.MANAGER, UserRole.FINANCE]}>
-                <Layout>
+                <MainLayout>
                   <Finance />
-                </Layout>
+                </MainLayout>
               </RoleBasedRoute>
             } />
 
             <Route path="/hr" element={
               <RoleBasedRoute allowedRoles={[UserRole.ADMIN, UserRole.MANAGER]}>
-                <Layout>
+                <MainLayout>
                   <HR />
-                </Layout>
+                </MainLayout>
               </RoleBasedRoute>
             } />
 
             <Route path="/reports" element={
               <RoleBasedRoute allowedRoles={[UserRole.ADMIN, UserRole.MANAGER, UserRole.FINANCE]}>
-                <Layout>
+                <MainLayout>
                   <Reports />
-                </Layout>
+                </MainLayout>
               </RoleBasedRoute>
             } />
 
             <Route path="/settings" element={
               <RoleBasedRoute allowedRoles={[UserRole.ADMIN]}>
-                <Layout>
+                <MainLayout>
                   <Settings />
-                </Layout>
+                </MainLayout>
               </RoleBasedRoute>
             } />
 
