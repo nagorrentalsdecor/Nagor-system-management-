@@ -1,0 +1,86 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@100;200;300;400;500;600;700;800;900&display=swap');
+
+:root {
+  --glass-bg: rgba(255, 255, 255, 0.82);
+  --glass-border: rgba(255, 255, 255, 0.4);
+  --glass-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.05);
+}
+
+html {
+  font-size: 14px;
+  /* Reduced base for cleaner, more professional data density */
+  -ms-text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: 'Montserrat', sans-serif;
+  letter-spacing: -0.01em;
+  color: #1a1a1a;
+  font-weight: 500;
+  /* Medium weight across the app */
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Montserrat', sans-serif;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+.glass-morphism {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Custom Tailored Gradients */
+.bg-nagor-purple {
+  background: linear-gradient(135deg, #9333ea 0%, #581c87 100%);
+}
+
+.bg-nagor-emerald {
+  background: linear-gradient(135deg, #a855f7 0%, #6b21a8 100%);
+}
+
+.bg-nagor-rose {
+  background: linear-gradient(135deg, #c084fc 0%, #7e22ce 100%);
+}
+
+.bg-nagor-amber {
+  background: linear-gradient(135deg, #d8b4fe 0%, #9333ea 100%);
+}

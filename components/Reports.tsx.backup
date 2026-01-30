@@ -1,0 +1,11 @@
+popularItems: items.slice(0, 5).map(item => ({
+            name: item.name,
+            totalQuantity: item.totalQuantity,
+            availableQuantity: Math.max(0, item.totalQuantity - bookings.filter(b => 
+              b.items.some((bookingItem: BookingItem) => bookingItem.itemId === item.id)
+            ).reduce((total, b) => {
+              const foundBookingItem = b.items.find((bookingItem: BookingItem) => bookingItem.itemId === item.id);
+              return total + (foundBookingItem?.quantity || 0);
+            }, 0)
+          })
+        }),
