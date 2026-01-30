@@ -58,6 +58,7 @@ const RoleBasedRoute = ({ children, allowedRoles }: { children?: React.ReactNode
 };
 
 export default function App() {
+  console.log("BUILD_VER: 1.0.1 - MainLayout Fix");
   const [user, setUser] = useState<{ name: string; role: UserRole } | null>(null);
   const [loading, setLoading] = useState(true);
 
