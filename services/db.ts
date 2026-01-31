@@ -533,11 +533,15 @@ export const createAuditLog = async (action: string, details: string, user?: { i
 
 export const authenticateUser = async (username: string, password: string): Promise<Employee | null> => {
   // We now query Supabase directly for auth to ensure security
+  console.log(`Attempting login for: ${username}`);
   const { data, error } = await supabase.from('employees')
     .select('*')
     .ilike('username', username) // Case insensitive
     .eq('password', password) // In real production, hash this!
     .single();
+
+  if (error) console.error("Auth Error:", error);
+  if (!data) console.warn("Auth Failed: No user found matching credentials");
 
   if (data) {
     return transformEmployeeFromDB(data);
