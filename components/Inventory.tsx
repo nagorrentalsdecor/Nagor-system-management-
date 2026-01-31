@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Item, ItemStatus, BookingStatus } from '../types';
-import { getItems, saveItems, getBookings, createAuditLog } from '../services/db';
+import { getItems, saveItems, getBookings, createAuditLog, deleteItem as deleteItemFromDb } from '../services/db';
 import { toastService } from '../services/toast';
 
 
@@ -139,8 +139,8 @@ export const Inventory = () => {
   const deleteItem = (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (window.confirm('Are you sure you want to delete this asset?')) {
+      deleteItemFromDb(id);
       const updated = items.filter(i => i.id !== id);
-      saveItems(updated);
       setItems(updated);
       createAuditLog('DELETE_ASSET', `Deleted asset: ${items.find(i => i.id === id)?.name}`);
       closeModal();

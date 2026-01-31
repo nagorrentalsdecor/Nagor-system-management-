@@ -356,6 +356,20 @@ export const saveItems = async (items: Item[]) => {
   }
 };
 
+export const deleteItem = async (itemId: string) => {
+  // Optimistic Update
+  cache.items = cache.items.filter(i => i.id !== itemId);
+
+  // Persist
+  try {
+    const { error } = await supabase.from('items').delete().eq('id', itemId);
+    if (error) throw error;
+  } catch (e) {
+    console.error("Delete Item Error", e);
+    // Ideally restore cache? 
+  }
+};
+
 export const saveCustomers = async (customers: Customer[]) => {
   cache.customers = customers; // Optimistic
   // Persist logic similar to items
