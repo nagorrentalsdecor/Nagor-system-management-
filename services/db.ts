@@ -472,7 +472,6 @@ export const saveEmployees = async (employees: Employee[]) => {
       performance_rating: e.performanceRating, address: e.address,
       guarantor_phone: e.guarantorPhone, has_system_access: e.hasSystemAccess,
       username: e.username, password: e.password,
-      video_url: e.photoUrl, // Map photoUrl to mismatched DB column if needed, or fix DB. DB has photo_url.
       photo_url: e.photoUrl,
       guarantor_name: e.guarantorName, bank_account: e.bankAccount,
       mobile_money_account: e.mobileMoneyAccount,
@@ -481,7 +480,15 @@ export const saveEmployees = async (employees: Employee[]) => {
       password_change_required: e.passwordChangeRequired
     };
     if (e.id && e.id.length > 5) payload.id = e.id;
-    const { data } = await supabase.from('employees').upsert(payload).select().single();
+
+    //console.log("Saving employee payload:", payload);
+    const { data, error } = await supabase.from('employees').upsert(payload).select().single();
+
+    if (error) {
+      console.error("Error saving employee to Supabase:", error);
+      // Don't throw here to allow other employees to be saved, but log it criticaly
+    }
+
     if (data) e.id = data.id;
   }
 };
