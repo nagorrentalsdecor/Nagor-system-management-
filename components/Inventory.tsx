@@ -24,6 +24,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Item, ItemStatus, BookingStatus } from '../types';
 import { getItems, saveItems, getBookings, createAuditLog } from '../services/db';
+import { toastService } from '../services/toast';
 
 
 const GlassCard = ({ children, className = "" }: any) => (
@@ -95,7 +96,10 @@ export const Inventory = () => {
   // --- CRUD Operations ---
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.category) return;
+    if (!formData.name || !formData.category) {
+      toastService.error("Please provide Item Designation and Category.");
+      return;
+    }
 
     // Ensure numbers are parsed correctly
     const finalData = {
@@ -121,6 +125,7 @@ export const Inventory = () => {
     closeModal();
     navigate('/inventory'); // Ensure URL clears if came from /add
     refreshData();
+    toastService.success(editingItem ? "Asset updated successfully." : "New asset registered successfully.");
   };
 
   const deleteItem = (id: string, e?: React.MouseEvent) => {

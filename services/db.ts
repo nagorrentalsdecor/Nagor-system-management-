@@ -99,7 +99,7 @@ const transformItemFromDB = (i: any): Item => ({
   totalQuantity: i.total_quantity || 0,
   quantityInMaintenance: i.quantity_in_maintenance || 0,
   price: i.price || 0,
-  status: (i.status as ItemStatus) || ItemStatus.AVAILABLE,
+  status: ((i.status as string)?.toUpperCase() as ItemStatus) || ItemStatus.AVAILABLE,
   imageUrl: i.image_url
 });
 
@@ -701,10 +701,45 @@ export const getApprovedTransactions = (): Transaction[] => {
 export const seedDatabase = async () => {
   // Only seed if empty
   if (cache.items.length === 0) {
-    console.log("Seeding Supabase Database...");
-    // Call the original seeding logic but mapped to Supabase inserts
-    // For brevity, skipping full seed logic implementation here, assuming manual seed or handled elsewhere.
-    // Or you can expose a /api/seed route or button.
+    console.log("Seeding Supabase Database: Items...");
+    const sampleItems = [
+      { name: 'Gold Phoenix Chair', category: 'Chairs', total_quantity: 200, price: 15, status: 'AVAILABLE', quantity_in_maintenance: 0 },
+      { name: 'White Dior Chair', category: 'Chairs', total_quantity: 150, price: 25, status: 'AVAILABLE', quantity_in_maintenance: 0 },
+      { name: 'Plastic Armless Chair', category: 'Chairs', total_quantity: 500, price: 2, status: 'AVAILABLE', quantity_in_maintenance: 0 },
+      { name: 'Round Table (10-seater)', category: 'Tables', total_quantity: 50, price: 40, status: 'AVAILABLE', quantity_in_maintenance: 0 },
+      { name: 'Rectangular Table (6ft)', category: 'Tables', total_quantity: 30, price: 30, status: 'AVAILABLE', quantity_in_maintenance: 0 },
+      { name: 'Marquee Tent (High Peak)', category: 'Tents', total_quantity: 5, price: 1500, status: 'AVAILABLE', quantity_in_maintenance: 0 },
+      { name: 'Standard Canopy', category: 'Tents', total_quantity: 10, price: 200, status: 'AVAILABLE', quantity_in_maintenance: 0 },
+      { name: 'Artificial Grass (Roll)', category: 'Flooring', total_quantity: 20, price: 100, status: 'AVAILABLE', quantity_in_maintenance: 0 }
+    ];
+
+    const { error } = await supabase.from('items').insert(sampleItems);
+    if (error) {
+      console.error("Error seeding items:", error);
+    } else {
+      // Refresh cache
+      const { data } = await supabase.from('items').select('*');
+      if (data) cache.items = data.map(transformItemFromDB);
+      console.log("Items seeded successfully");
+    }
+  }
+
+  if (cache.customers.length === 0) {
+    console.log("Seeding Supabase Database: Customers...");
+    const sampleCustomers = [
+      { name: 'Event Pro GH', phone: '0555000000', email: 'contact@eventpro.gh', total_rentals: 5 },
+      { name: 'Alice Weddings', phone: '0200000001', email: 'alice@weddings.com', total_rentals: 2 },
+      { name: 'Corporate Events Ltd', phone: '0244000000', email: 'events@corporate.com', total_rentals: 10, is_blacklisted: false }
+    ];
+
+    const { error } = await supabase.from('customers').insert(sampleCustomers);
+    if (error) {
+      console.error("Error seeding customers:", error);
+    } else {
+      const { data } = await supabase.from('customers').select('*');
+      if (data) cache.customers = data.map(transformCustomerFromDB);
+      console.log("Customers seeded successfully");
+    }
   }
 };
 

@@ -295,7 +295,10 @@ export const Finance = () => {
 
   const handleTransactionSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!transactionForm.amount || !transactionForm.description) return;
+    if (!transactionForm.amount || !transactionForm.description) {
+      toastService.error("Please provide Amount and Description.");
+      return;
+    }
 
     // All transactions are created as PENDING regardless of user role
     createTransaction({

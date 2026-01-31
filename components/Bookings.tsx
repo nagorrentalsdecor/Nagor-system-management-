@@ -40,6 +40,7 @@ export const Bookings = () => {
   const [printMode, setPrintMode] = useState<'invoice' | 'waybill'>('invoice');
   const [penaltyType, setPenaltyType] = useState<'LOSS' | 'DAMAGE' | 'OTHER'>('LOSS');
   const [penaltyDescription, setPenaltyDescription] = useState<string>('');
+  const [inventorySearch, setInventorySearch] = useState('');
 
   useEffect(() => {
     setView(location.pathname === '/bookings/new' ? 'create' : 'list');
@@ -600,17 +601,26 @@ export const Bookings = () => {
                       <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl"><Tag size={20} /></div>
                       <div>
                         <h4 className="text-xl font-bold text-stone-800 tracking-tight">Inventory Dispatch</h4>
-                        <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Allocate assets to this project</p>
+                        <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Allocate assets to this project ({items.length} Available)</p>
                       </div>
                     </div>
                     <div className="relative w-64">
                       <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" size={14} />
-                      <input type="text" placeholder="Search inventory..." className="w-full pl-10 pr-4 py-3 bg-stone-50 border border-stone-100 rounded-xl text-xs font-bold focus:outline-none" />
+                      <input
+                        type="text"
+                        placeholder="Search inventory..."
+                        className="w-full pl-10 pr-4 py-3 bg-stone-50 border border-stone-100 rounded-xl text-xs font-bold focus:outline-none"
+                        value={inventorySearch}
+                        onChange={(e) => setInventorySearch(e.target.value)}
+                      />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[400px] overflow-y-auto no-scrollbar pb-4">
-                    {items.filter(i => i.status === ItemStatus.AVAILABLE).map(item => {
+                    {items.filter(i =>
+                      i.status === ItemStatus.AVAILABLE &&
+                      (i.name.toLowerCase().includes(inventorySearch.toLowerCase()) || i.category.toLowerCase().includes(inventorySearch.toLowerCase()))
+                    ).map(item => {
                       const selected = newBooking.selectedItems.find(x => x.item.id === item.id);
                       return (
                         <div

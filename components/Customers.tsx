@@ -29,6 +29,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Customer, Booking } from '../types';
 import { getCustomers, saveCustomers, getBookings, createAuditLog } from '../services/db';
+import { toastService } from '../services/toast';
 
 
 const GlassCard = ({ children, className = "" }: any) => (
@@ -182,7 +183,10 @@ export const Customers = () => {
   // --- CRUD ---
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.phone) return;
+    if (!formData.name || !formData.phone) {
+      toastService.error("Please provide Name and Contact Number.");
+      return;
+    }
 
     let updated = [...customers];
     if (editingCustomer) {
@@ -205,6 +209,7 @@ export const Customers = () => {
     setCustomers(updated);
     closeModal();
     refreshData();
+    toastService.success(editingCustomer ? "Partner profile updated." : "New partner onboarded successfully.");
   };
 
   const deleteCustomer = (id: string, e: React.MouseEvent) => {
