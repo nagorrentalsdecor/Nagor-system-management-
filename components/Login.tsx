@@ -55,6 +55,13 @@ export const Login: React.FC = () => {
         return;
       }
 
+      // Check if user has system access
+      if (!employee.hasSystemAccess) {
+        setError('Access denied. You do not have system access permissions.');
+        setLoading(false);
+        return;
+      }
+
       // Check if first login - must change temporary password
       if (employee.isFirstLogin || employee.passwordChangeRequired) {
         setChangePasswordData({

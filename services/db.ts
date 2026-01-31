@@ -512,7 +512,7 @@ export const createAuditLog = async (action: string, details: string, user?: { i
   if (!actor) actor = { id: 'sys', name: 'System Admin' };
 
   const newLog: AuditLog = {
-    id: Math.random().toString(36), // Temp ID
+    id: crypto.randomUUID(),
     action, details, userId: actor.id, userName: actor.name,
     timestamp: new Date().toISOString()
   };
@@ -676,7 +676,7 @@ export const getDashboardMetrics = (): DashboardMetrics => {
 export const createTransaction = async (t: Omit<Transaction, 'id' | 'status' | 'createdAt'> & { status?: TransactionStatus, submittedBy: string }) => {
   // Optimistic
   const newT: Transaction = {
-    ...t, id: 'temp-' + Date.now(), status: TransactionStatus.PENDING, createdAt: new Date().toISOString(), submittedBy: t.submittedBy || 'system'
+    ...t, id: crypto.randomUUID(), status: TransactionStatus.PENDING, createdAt: new Date().toISOString(), submittedBy: t.submittedBy || 'system'
   } as Transaction;
 
   cache.transactions.push(newT);

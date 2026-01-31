@@ -67,7 +67,7 @@ export const HR = () => {
     }).filter(i => i.netPay > 0);
 
     const newPayroll: PayrollRun = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: crypto.randomUUID(),
       month: payrollData.month, year: payrollData.year,
       totalAmount, status: PayrollStatus.PENDING, createdAt: new Date().toISOString(), items
     };
@@ -105,7 +105,7 @@ export const HR = () => {
 
         empData = {
           ...empData,
-          id: Math.random().toString(36).substr(2, 9),
+          id: crypto.randomUUID(),
           status: EmployeeStatus.ACTIVE,
           joinDate: new Date().toISOString(),
           username: username,
