@@ -299,7 +299,7 @@ export const Customers = () => {
         {[
           { label: "Partner Base", val: globalMetrics.total, icon: Users, col: "from-purple-600 to-purple-800" },
           { label: "Portfolio Value", val: `₵${globalMetrics.revenue.toLocaleString()}`, icon: CreditCard, col: "from-purple-500 to-purple-700" },
-          { label: "Risk Flags", val: globalMetrics.blacklisted, icon: ShieldAlert, col: "from-purple-400 to-purple-600" },
+          { label: "Risk Flags", val: globalMetrics.blacklisted, icon: ShieldAlert, col: "from-rose-500 to-rose-700" },
           { label: "Active Engagements", val: globalMetrics.active, icon: CalendarClock, col: "from-purple-300 to-purple-500" }
         ].map((kpi, i) => (
           <GlassCard key={i} className="p-5 relative overflow-hidden group border-none shadow-lg">
@@ -416,7 +416,7 @@ export const Customers = () => {
                 </div>
 
                 {customer.isBlacklisted && (
-                  <div className="mt-4 p-3 bg-purple-900 text-white rounded-2xl flex items-center gap-2 animate-pulse">
+                  <div className="mt-4 p-3 bg-rose-600 text-white rounded-2xl flex items-center gap-2 animate-pulse">
                     <ShieldAlert size={16} />
                     <span className="text-[10px] font-bold uppercase tracking-wider">Blacklisted / High Risk</span>
                   </div>
@@ -586,10 +586,10 @@ export const Customers = () => {
               {/* Risk Management Section */}
               {activeModalTab === 'RISK' && (
                 <div className="space-y-6 animate-in fade-in duration-300">
-                  <div className={`p-6 rounded-[2rem] border-2 transition-all ${formData.isBlacklisted ? 'bg-purple-900/10 border-purple-300' : 'bg-purple-50 border-purple-200'}`}>
+                  <div className={`p-6 rounded-[2rem] border-2 transition-all ${formData.isBlacklisted ? 'bg-rose-50 border-rose-200' : 'bg-purple-50 border-purple-200'}`}>
                     <div className="flex justify-between items-center mb-4">
                       <div>
-                        <h4 className={`text-sm font-bold uppercase tracking-tight ${formData.isBlacklisted ? 'text-purple-900' : 'text-purple-600'}`}>
+                        <h4 className={`text-sm font-bold uppercase tracking-tight ${formData.isBlacklisted ? 'text-rose-700' : 'text-purple-600'}`}>
                           {formData.isBlacklisted ? 'Blacklist Active' : 'Account Status: Good'}
                         </h4>
                         <p className="text-[10px] font-bold text-stone-400 mt-1">Restrict rentals for this partner</p>
@@ -597,7 +597,7 @@ export const Customers = () => {
                       <button
                         type="button"
                         onClick={() => setFormData({ ...formData, isBlacklisted: !formData.isBlacklisted })}
-                        className={`w-14 h-8 rounded-full relative transition-all ${formData.isBlacklisted ? 'bg-purple-600' : 'bg-stone-200'}`}
+                        className={`w-14 h-8 rounded-full relative transition-all ${formData.isBlacklisted ? 'bg-rose-600' : 'bg-stone-200'}`}
                       >
                         <div className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-all ${formData.isBlacklisted ? 'left-7' : 'left-1'}`}></div>
                       </button>
