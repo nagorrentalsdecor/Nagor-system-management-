@@ -6,7 +6,7 @@ import {
   CreditCard, Play, FileText, Zap, ShieldCheck, Crown, ChevronRight, MessageSquare, Key, Copy, Check
 } from 'lucide-react';
 import { Employee, UserRole, EmployeeStatus, PayrollRun, PayrollStatus, PayrollItem } from '../types';
-import { getEmployees, saveEmployees, getPayrollRuns, savePayrollRuns, resetUserPassword, createAuditLog } from '../services/db';
+import { getEmployees, saveEmployees, getPayrollRuns, savePayrollRuns, resetUserPassword, createAuditLog, generateUUID } from '../services/db';
 
 type ActionType = 'EDIT' | 'FINANCE' | 'LEAVE' | 'PERFORMANCE' | 'STATUS' | 'PAYROLL' | 'RESET_PASSWORD' | 'PENALTY' | null;
 
@@ -45,13 +45,18 @@ export const HR = () => {
     setPayrollHistory(getPayrollRuns().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
   };
 
-  const saveEmployeeData = (updated: Employee[]) => {
-    saveEmployees(updated);
-    setEmployees(updated);
-    closeModal();
+  const saveEmployeeData = async (updated: Employee[]) => {
+    try {
+      await saveEmployees(updated);
+      setEmployees(updated);
+      closeModal();
+    } catch (error) {
+      console.error("Failed to save employee data:", error);
+      alert("Failed to save employee data. Please try again.");
+    }
   };
 
-  const handleRunPayroll = () => {
+  const handleRunPayroll = async () => {
     const currentRuns = getPayrollRuns();
     const existing = currentRuns.find(p => p.month === payrollData.month && p.year === payrollData.year && p.status !== PayrollStatus.REJECTED);
     if (existing) return alert(`Payroll is already ${existing.status}.`);
@@ -67,18 +72,18 @@ export const HR = () => {
     }).filter(i => i.netPay > 0);
 
     const newPayroll: PayrollRun = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       month: payrollData.month, year: payrollData.year,
       totalAmount, status: PayrollStatus.PENDING, createdAt: new Date().toISOString(), items
     };
 
-    savePayrollRuns([...currentRuns, newPayroll]);
+    await savePayrollRuns([...currentRuns, newPayroll]);
     createAuditLog('RUN_PAYROLL', `Authorized payroll for ${new Date(payrollData.year, payrollData.month).toLocaleString('default', { month: 'long', year: 'numeric' })}. Total: ₵${totalAmount.toLocaleString()}`);
     refreshData();
     closeModal();
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (activeAction === 'PAYROLL') return;
 
@@ -105,7 +110,7 @@ export const HR = () => {
 
         empData = {
           ...empData,
-          id: crypto.randomUUID(),
+          id: generateUUID(),
           status: EmployeeStatus.ACTIVE,
           joinDate: new Date().toISOString(),
           username: username,
@@ -152,7 +157,7 @@ export const HR = () => {
       createAuditLog('APPLY_PENALTY', `Applied penalty of ₵${penAmt} to ${selectedEmployee.name}. Reason: ${formData.deductionReason}`);
     }
 
-    saveEmployeeData(updated);
+    await saveEmployeeData(updated);
   };
 
   const openFinanceModal = (emp: Employee) => {

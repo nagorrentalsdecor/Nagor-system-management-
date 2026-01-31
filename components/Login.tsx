@@ -40,7 +40,7 @@ export const Login: React.FC = () => {
 
     try {
       // Authenticate user with username and password
-      const employee = await authenticateUser(username, password);
+      const employee = await authenticateUser(username.trim(), password);
 
       if (!employee) {
         setError('Invalid username or password. Please try again.');

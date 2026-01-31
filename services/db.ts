@@ -512,7 +512,7 @@ export const createAuditLog = async (action: string, details: string, user?: { i
   if (!actor) actor = { id: 'sys', name: 'System Admin' };
 
   const newLog: AuditLog = {
-    id: crypto.randomUUID(),
+    id: generateUUID(),
     action, details, userId: actor.id, userName: actor.name,
     timestamp: new Date().toISOString()
   };
@@ -676,7 +676,7 @@ export const getDashboardMetrics = (): DashboardMetrics => {
 export const createTransaction = async (t: Omit<Transaction, 'id' | 'status' | 'createdAt'> & { status?: TransactionStatus, submittedBy: string }) => {
   // Optimistic
   const newT: Transaction = {
-    ...t, id: crypto.randomUUID(), status: TransactionStatus.PENDING, createdAt: new Date().toISOString(), submittedBy: t.submittedBy || 'system'
+    ...t, id: generateUUID(), status: TransactionStatus.PENDING, createdAt: new Date().toISOString(), submittedBy: t.submittedBy || 'system'
   } as Transaction;
 
   cache.transactions.push(newT);
@@ -857,3 +857,16 @@ export const seedDatabase = async () => {
 export const exportDatabase = () => JSON.stringify(cache);
 export const importDatabase = (json: string) => false; // Disabled for cloud sync safety
 export const clearDatabase = () => { console.warn("Cannot clear cloud DB from client"); };
+
+// --- UUID Helper ---
+export const generateUUID = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback UUID v4 generator for environments without secure crypto
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
