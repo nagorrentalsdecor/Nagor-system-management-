@@ -84,9 +84,106 @@ export const initializeData = async () => {
 
     isInitialized = true;
     console.log("Supabase Data Loaded Successfully");
+    setupRealtimeListeners();
   } catch (error) {
     console.error("Critical: Failed to load data from Supabase", error);
     // Fallback?
+  }
+};
+
+// --- Realtime Sync ---
+const setupRealtimeListeners = () => {
+  console.log("Setting up Realtime Listeners...");
+  const channel = supabase.channel('public:db_sync');
+
+  channel
+    .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+      // console.log('Realtime Event:', payload);
+      handleRealtimeEvent(payload);
+    })
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        // console.log('Realtime connected!');
+      }
+    });
+};
+
+const handleRealtimeEvent = (payload: any) => {
+  const { table, eventType, new: newRecord, old: oldRecord } = payload;
+  let updatedTable = '';
+
+  switch (table) {
+    case 'items':
+      updatedTable = 'items';
+      if (eventType === 'DELETE') {
+        cache.items = cache.items.filter(i => i.id !== oldRecord.id);
+      } else {
+        const item = transformItemFromDB(newRecord);
+        const index = cache.items.findIndex(i => i.id === item.id);
+        if (index > -1) cache.items[index] = item;
+        else cache.items.push(item);
+      }
+      break;
+    case 'customers':
+      updatedTable = 'customers';
+      if (eventType === 'DELETE') {
+        cache.customers = cache.customers.filter(c => c.id !== oldRecord.id);
+      } else {
+        const customer = transformCustomerFromDB(newRecord);
+        const index = cache.customers.findIndex(c => c.id === customer.id);
+        if (index > -1) cache.customers[index] = customer;
+        else cache.customers.push(customer);
+      }
+      break;
+    case 'bookings':
+      updatedTable = 'bookings';
+      // For Bookings, handling deep relations (items, penalties) via realtime is complex
+      // For now, we will just Reload the specific booking or all bookings if complex
+      // Simplest strategy: Fetch the single updated booking fully from API to get relations
+      if (eventType === 'DELETE') {
+        cache.bookings = cache.bookings.filter(b => b.id !== oldRecord.id);
+      } else {
+        // Optimization: Fetch just this one
+        supabase.from('bookings').select(`*, items:booking_items(*), penalties(*)`).eq('id', newRecord.id).single()
+          .then(({ data }) => {
+            if (data) {
+              const booking = {
+                // ... same transform logic ...
+                id: data.id, customerId: data.customer_id, customerName: data.customer_name,
+                startDate: data.start_date, endDate: data.end_date, status: data.status as BookingStatus,
+                totalAmount: data.total_amount, paidAmount: data.paid_amount, lateFee: data.late_fee,
+                notes: data.notes, createdAt: data.created_at,
+                items: data.items ? data.items.map((bi: any) => ({
+                  itemId: bi.item_id, itemName: bi.item_name, quantity: bi.quantity, priceAtBooking: bi.price_at_booking
+                })) : [],
+                penalties: data.penalties ? data.penalties.map((p: any) => ({
+                  type: p.type, amount: p.amount, description: p.description, date: p.date
+                })) : []
+              };
+              const idx = cache.bookings.findIndex(b => b.id === booking.id);
+              if (idx > -1) cache.bookings[idx] = booking;
+              else cache.bookings.push(booking);
+              window.dispatchEvent(new CustomEvent('db-sync', { detail: { table: 'bookings' } }));
+            }
+          });
+        return; // Early return because we dispatch event in async callback
+      }
+      break;
+    case 'transactions':
+      updatedTable = 'transactions';
+      if (eventType === 'DELETE') {
+        cache.transactions = cache.transactions.filter(t => t.id !== oldRecord.id);
+      } else {
+        const trans = transformTransactionFromDB(newRecord);
+        const idx = cache.transactions.findIndex(t => t.id === trans.id);
+        if (idx > -1) cache.transactions[idx] = trans;
+        else cache.transactions.push(trans);
+      }
+      break;
+  }
+
+  if (updatedTable) {
+    window.dispatchEvent(new CustomEvent('db-sync', { detail: { table: updatedTable } }));
   }
 };
 
@@ -99,7 +196,7 @@ const transformItemFromDB = (i: any): Item => ({
   totalQuantity: i.total_quantity || 0,
   quantityInMaintenance: i.quantity_in_maintenance || 0,
   price: i.price || 0,
-  status: ((i.status as string)?.toUpperCase() as ItemStatus) || ItemStatus.AVAILABLE,
+  status: ((i.status as string)?.trim().toUpperCase() as ItemStatus) || ItemStatus.AVAILABLE,
   imageUrl: i.image_url
 });
 

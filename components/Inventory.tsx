@@ -57,6 +57,14 @@ export const Inventory = () => {
       openModal();
     }
     loadData();
+
+    const handleSync = (e: any) => {
+      if (e.detail?.table === 'items' || e.detail?.table === 'bookings') {
+        loadData();
+      }
+    };
+    window.addEventListener('db-sync', handleSync);
+    return () => window.removeEventListener('db-sync', handleSync);
   }, [location.pathname]);
 
   const loadData = () => {

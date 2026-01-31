@@ -46,7 +46,16 @@ export const Bookings = () => {
     setView(location.pathname === '/bookings/new' ? 'create' : 'list');
   }, [location.pathname]);
 
-  useEffect(() => { refreshData(); }, []);
+  useEffect(() => {
+    refreshData();
+    const handleSync = (e: any) => {
+      if (e.detail?.table === 'items' || e.detail?.table === 'bookings' || e.detail?.table === 'customers') {
+        refreshData();
+      }
+    };
+    window.addEventListener('db-sync', handleSync);
+    return () => window.removeEventListener('db-sync', handleSync);
+  }, []);
 
   const refreshData = () => {
     setBookings(getBookings().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
@@ -618,93 +627,116 @@ export const Bookings = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[400px] overflow-y-auto no-scrollbar pb-4">
                     {items.filter(i =>
-                      i.status === ItemStatus.AVAILABLE &&
+                      i.status !== ItemStatus.DAMAGED &&
                       (i.name.toLowerCase().includes(inventorySearch.toLowerCase()) || i.category.toLowerCase().includes(inventorySearch.toLowerCase()))
-                    ).map(item => {
-                      const selected = newBooking.selectedItems.find(x => x.item.id === item.id);
-                      return (
-                        <div
-                          key={item.id}
-                          className={`flex items-center gap-4 p-4 bg-white border rounded-3xl transition-all group ${selected ? 'border-purple-400 shadow-lg shadow-purple-50' : 'border-stone-100 hover:border-purple-200'}`}
-                        >
-                          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors overflow-hidden ${selected ? 'bg-purple-50 text-purple-600' : 'bg-stone-50 text-stone-400'}`}>
-                            {item.imageUrl ? (
-                              <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
-                            ) : (
-                              <Zap size={20} />
-                            )}
-                          </div>
-                          <div className="flex-1 text-left">
-                            <p className="text-xs font-bold text-stone-800">{item.name}</p>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-[9px] font-bold text-stone-400 uppercase tracking-tighter">₵{item.price} / day</span>
-                              <span className="text-[9px] font-bold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded-lg border border-purple-100">
-                                {checkAvailability(item.id, newBooking.startDate, newBooking.endDate)} Avail.
-                              </span>
+                    ).length === 0 ? (
+                      <div className="col-span-2 flex flex-col items-center justify-center py-10 text-stone-400">
+                        <Tag size={32} className="mb-2 opacity-50" />
+                        <p className="text-xs font-bold uppercase tracking-widest">No matching assets found</p>
+                      </div>
+                    ) : (
+                      items.filter(i =>
+                        i.status !== ItemStatus.DAMAGED &&
+                        (i.name.toLowerCase().includes(inventorySearch.toLowerCase()) || i.category.toLowerCase().includes(inventorySearch.toLowerCase()))
+                      ).map(item => {
+                        const selected = newBooking.selectedItems.find(x => x.item.id === item.id);
+                        const isAvailableStatus = item.status === ItemStatus.AVAILABLE;
+                        const availableQty = checkAvailability(item.id, newBooking.startDate, newBooking.endDate);
+
+                        return (
+                          <div
+                            key={item.id}
+                            className={`flex items-center gap-4 p-4 bg-white border rounded-3xl transition-all group ${selected ? 'border-purple-400 shadow-lg shadow-purple-50' : 'border-stone-100 hover:border-purple-200'} ${!isAvailableStatus || availableQty <= 0 ? 'opacity-60 grayscale' : ''}`}
+                          >
+                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors overflow-hidden ${selected ? 'bg-purple-50 text-purple-600' : 'bg-stone-50 text-stone-400'}`}>
+                              {item.imageUrl ? (
+                                <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <Zap size={20} />
+                              )}
+                            </div>
+                            <div className="flex-1 text-left">
+                              <p className="text-xs font-bold text-stone-800">{item.name}</p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[9px] font-bold text-stone-400 uppercase tracking-tighter">₵{item.price} / day</span>
+                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-lg border ${availableQty > 0 ? 'text-purple-600 bg-purple-50 border-purple-100' : 'text-rose-600 bg-rose-50 border-rose-100'}`}>
+                                  {availableQty} Avail.
+                                </span>
+                                {!isAvailableStatus && (
+                                  <span className="text-[8px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-lg uppercase border border-amber-100">{item.status}</span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center bg-stone-50 rounded-2xl p-1 gap-1">
+                              {selected && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const updated = [...newBooking.selectedItems];
+                                      const idx = updated.findIndex(x => x.item.id === item.id);
+                                      if (updated[idx].qty > 1) updated[idx].qty -= 1;
+                                      else updated.splice(idx, 1);
+                                      setNewBooking({ ...newBooking, selectedItems: updated });
+                                    }}
+                                    className="w-8 h-8 rounded-xl bg-white text-stone-400 hover:text-rose-500 flex items-center justify-center transition-colors border border-stone-100"
+                                  >
+                                    <Minus size={14} />
+                                  </button>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    className="w-10 text-center text-xs font-bold text-purple-600 bg-transparent outline-none focus:ring-0 border-none p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    value={selected.qty}
+                                    onChange={(e) => {
+                                      const val = parseInt(e.target.value);
+                                      const available = checkAvailability(item.id, newBooking.startDate, newBooking.endDate);
+
+                                      if (isNaN(val) || val < 1) return;
+
+                                      if (val > available) {
+                                        toastService.warning(`Insufficient Stock: Only ${available} units available.`);
+                                        setNewBooking({ ...newBooking, selectedItems: newBooking.selectedItems.map(x => x.item.id === item.id ? { ...x, qty: available } : x) });
+                                      } else {
+                                        setNewBooking({ ...newBooking, selectedItems: newBooking.selectedItems.map(x => x.item.id === item.id ? { ...x, qty: val } : x) });
+                                      }
+                                    }}
+                                  />
+                                </>
+                              )}
+                              <button
+                                type="button"
+                                disabled={availableQty <= 0 && !selected}
+                                onClick={() => {
+                                  const available = checkAvailability(item.id, newBooking.startDate, newBooking.endDate);
+                                  const currentQty = selected ? selected.qty : 0;
+
+                                  if (available <= 0) {
+                                    toastService.warning(`Item Unavailable: ${item.name} is out of stock for these dates.`);
+                                    return;
+                                  }
+
+                                  if (currentQty >= available) {
+                                    toastService.warning(`Insufficient Stock: Only ${available} units of ${item.name} are available for these dates.`);
+                                    return;
+                                  }
+
+                                  if (selected) {
+                                    setNewBooking({ ...newBooking, selectedItems: newBooking.selectedItems.map(x => x.item.id === item.id ? { ...x, qty: x.qty + 1 } : x) });
+                                  } else {
+                                    setNewBooking({ ...newBooking, selectedItems: [...newBooking.selectedItems, { item, qty: 1 }] });
+                                  }
+                                }}
+                                className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${selected ? 'bg-purple-600 text-white shadow-md' : availableQty <= 0 ? 'bg-stone-100 text-stone-300 cursor-not-allowed' : 'bg-white text-stone-400 hover:text-purple-600 border border-stone-100'}`}
+                              >
+                                {selected ? <Plus size={14} /> : <Plus size={14} />}
+                              </button>
                             </div>
                           </div>
-                          <div className="flex items-center bg-stone-50 rounded-2xl p-1 gap-1">
-                            {selected && (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const updated = [...newBooking.selectedItems];
-                                    const idx = updated.findIndex(x => x.item.id === item.id);
-                                    if (updated[idx].qty > 1) updated[idx].qty -= 1;
-                                    else updated.splice(idx, 1);
-                                    setNewBooking({ ...newBooking, selectedItems: updated });
-                                  }}
-                                  className="w-8 h-8 rounded-xl bg-white text-stone-400 hover:text-rose-500 flex items-center justify-center transition-colors border border-stone-100"
-                                >
-                                  <Minus size={14} />
-                                </button>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  className="w-10 text-center text-xs font-bold text-purple-600 bg-transparent outline-none focus:ring-0 border-none p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                  value={selected.qty}
-                                  onChange={(e) => {
-                                    const val = parseInt(e.target.value);
-                                    const available = checkAvailability(item.id, newBooking.startDate, newBooking.endDate);
-
-                                    if (isNaN(val) || val < 1) return;
-
-                                    if (val > available) {
-                                      toastService.warning(`Insufficient Stock: Only ${available} units available.`);
-                                      setNewBooking({ ...newBooking, selectedItems: newBooking.selectedItems.map(x => x.item.id === item.id ? { ...x, qty: available } : x) });
-                                    } else {
-                                      setNewBooking({ ...newBooking, selectedItems: newBooking.selectedItems.map(x => x.item.id === item.id ? { ...x, qty: val } : x) });
-                                    }
-                                  }}
-                                />
-                              </>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const available = checkAvailability(item.id, newBooking.startDate, newBooking.endDate);
-                                const currentQty = selected ? selected.qty : 0;
-
-                                if (currentQty >= available) {
-                                  toastService.warning(`Insufficient Stock: Only ${available} units of ${item.name} are available for these dates.`);
-                                  return;
-                                }
-
-                                if (selected) {
-                                  setNewBooking({ ...newBooking, selectedItems: newBooking.selectedItems.map(x => x.item.id === item.id ? { ...x, qty: x.qty + 1 } : x) });
-                                } else {
-                                  setNewBooking({ ...newBooking, selectedItems: [...newBooking.selectedItems, { item, qty: 1 }] });
-                                }
-                              }}
-                              className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${selected ? 'bg-purple-600 text-white shadow-md' : 'bg-white text-stone-400 hover:text-purple-600 border border-stone-100'}`}
-                            >
-                              {selected ? <Plus size={14} /> : <Plus size={14} />}
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })
+                    )
+                    }
                   </div>
                 </div>
               </GlassCard>
