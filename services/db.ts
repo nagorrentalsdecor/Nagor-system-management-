@@ -1005,6 +1005,9 @@ export const seedDatabase = async () => {
   }
 };
 
+export const exportDatabase = () => JSON.stringify(cache);
+export const importDatabase = (json: string) => false; // Disabled for cloud sync safety
+
 export const clearProductionData = async () => {
   console.log("Purging test data for production launch...");
 
