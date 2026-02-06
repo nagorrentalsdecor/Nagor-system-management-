@@ -1005,9 +1005,39 @@ export const seedDatabase = async () => {
   }
 };
 
-export const exportDatabase = () => JSON.stringify(cache);
-export const importDatabase = (json: string) => false; // Disabled for cloud sync safety
-export const clearDatabase = () => { console.warn("Cannot clear cloud DB from client"); };
+export const clearProductionData = async () => {
+  console.log("Purging test data for production launch...");
+
+  try {
+    // 1. Transactions - Using filter to target all records
+    await supabase.from('transactions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    // 2. Penalties & Booking Items (Child records)
+    await supabase.from('penalties').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('booking_items').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    // 3. Bookings
+    await supabase.from('bookings').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    // 4. Payroll
+    await supabase.from('payroll_runs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    // 5. Audit Logs
+    await supabase.from('audit_logs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+
+    // Update Local Cache
+    cache.bookings = [];
+    cache.transactions = [];
+    cache.payrollRuns = [];
+    cache.logs = [];
+
+    console.log("Database purge complete.");
+    return true;
+  } catch (err) {
+    console.error("Purge Error:", err);
+    throw err;
+  }
+};
+
+export const clearDatabase = () => {
+  return clearProductionData();
+};
 
 // --- UUID Helper ---
 export const generateUUID = () => {

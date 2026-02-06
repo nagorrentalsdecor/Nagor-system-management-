@@ -396,6 +396,21 @@ export const Settings = () => {
     }
   };
 
+  const handleProductionPurge = async () => {
+    if (window.confirm('PRODUCTION PROTOCOL: This will permanently delete all TEST Bookings, Transactions, Payroll, and Audit Logs.\n\nInventory, Employees, and Settings will be PRESERVED.\n\nAre you ready to launch productively?')) {
+      if (window.confirm('FINAL CONFIRMATION: Purge all activity records?')) {
+        try {
+          await clearDatabase();
+          alert('System purged successfully! All test records have been removed. The system is now ready for production. Reloading...');
+          window.location.reload();
+        } catch (err) {
+          console.error(err);
+          alert('Failed to purge data. Please check your connection.');
+        }
+      }
+    }
+  };
+
   const sections = [
     { id: 'general', label: 'General', icon: <SettingsIcon className="h-4 w-4 mr-2" /> },
     { id: 'users', label: 'Users & Permissions', icon: <UserCog className="h-4 w-4 mr-2" /> },
@@ -1184,6 +1199,17 @@ export const Settings = () => {
               className="w-full px-4 py-2 bg-purple-900 text-white rounded-xl font-bold hover:bg-purple-800 transition"
             >
               Reset System
+            </button>
+          </div>
+
+          <div className="p-6 bg-rose-50 rounded-2xl border border-rose-100">
+            <h4 className="text-lg font-bold text-rose-800 mb-2">Production Launch</h4>
+            <p className="text-sm text-rose-600 mb-4">Purge all test Bookings, Transactions, and Logs. Keep Inventory/Staff.</p>
+            <button
+              onClick={handleProductionPurge}
+              className="w-full px-4 py-2 bg-rose-600 text-white rounded-xl font-bold hover:bg-rose-700 transition shadow-lg shadow-rose-100"
+            >
+              Clear Local Test Data
             </button>
           </div>
         </div>
