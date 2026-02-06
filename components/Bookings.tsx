@@ -41,6 +41,7 @@ export const Bookings = () => {
   const [penaltyType, setPenaltyType] = useState<'LOSS' | 'DAMAGE' | 'OTHER'>('LOSS');
   const [penaltyDescription, setPenaltyDescription] = useState<string>('');
   const [inventorySearch, setInventorySearch] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     setView(location.pathname === '/bookings/new' ? 'create' : 'list');
@@ -64,26 +65,44 @@ export const Bookings = () => {
   };
 
   const [newBooking, setNewBooking] = useState({
-    customerId: '', startDate: '', endDate: '', selectedItems: [] as { item: Item; qty: number }[], notes: '', paidAmount: ''
+    customerId: '',
+    startDate: '',
+    endDate: '',
+    bookingDate: new Date().toISOString().split('T')[0], // Default to today
+    selectedItems: [] as { item: Item; qty: number }[],
+    notes: '',
+    paidAmount: ''
   });
 
   const handleCreateBooking = () => {
+    if (isSubmitting) return; // Prevent double submission
+    setIsSubmitting(true);
+
     // 1. Basic Validation
     if (!newBooking.customerId) {
       toastService.error("Please select a partner/customer.");
+      setIsSubmitting(false);
       return;
     }
     const customer = customers.find(c => c.id === newBooking.customerId);
     if (customer?.isBlacklisted) {
       toastService.error(`OPERATION BLOCKED: ${customer.name} is BLACKLISTED.\nReason: ${customer.riskNotes || 'High Risk'}`);
+      setIsSubmitting(false);
+      return;
+    }
+    if (!newBooking.bookingDate) {
+      toastService.error("Please select the date of booking.");
+      setIsSubmitting(false);
       return;
     }
     if (!newBooking.startDate || !newBooking.endDate) {
       toastService.error("Please select valid deployment and extraction dates.");
+      setIsSubmitting(false);
       return;
     }
     if (newBooking.selectedItems.length === 0) {
       toastService.error("No assets selected for dispatch.");
+      setIsSubmitting(false);
       return;
     }
 
@@ -95,10 +114,13 @@ export const Bookings = () => {
 
     if (start > end) {
       toastService.error("Extraction date cannot be before deployment date.");
+      setIsSubmitting(false);
       return;
     }
+    // Booking Date logic: we allow backdating, so no strict "past" check needed for bookingDate itself.
+    // However, deployment date checks remain.
     if (end < now) {
-      toastService.warning("Warning: You are creating a booking in the past.");
+      toastService.warning("Warning: You are creating a booking record for a past event.");
     }
 
     // 3. Availability Check
@@ -112,39 +134,62 @@ export const Bookings = () => {
 
     if (conflicts.length > 0) {
       toastService.error(`Stock Shortage: ${conflicts[0]}`); // Show first conflict
+      setIsSubmitting(false);
       return;
     }
 
     const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) || 1;
     const totalAmount = newBooking.selectedItems.reduce((acc, curr) => acc + (curr.item.price * curr.qty * days), 0);
+    const finalPaidAmount = Math.abs(parseFloat(newBooking.paidAmount || '0'));
+
+    if (isNaN(finalPaidAmount)) {
+      toastService.error("Invalid payment amount entered.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Use the selected Booking Date logic
+    const creationDate = new Date(newBooking.bookingDate);
+    // Try to preserve current time if it is today, otherwise default to noon to avoid timezone shifts
+    const isToday = newBooking.bookingDate === new Date().toISOString().split('T')[0];
+    if (isToday) {
+      const confirmNow = new Date();
+      creationDate.setHours(confirmNow.getHours(), confirmNow.getMinutes(), confirmNow.getSeconds());
+    } else {
+      creationDate.setHours(12, 0, 0, 0);
+    }
 
     const booking: Booking = {
       id: Math.random().toString(36).substr(2, 9).toUpperCase(),
       customerId: newBooking.customerId, customerName: customer?.name || 'Unknown',
       items: newBooking.selectedItems.map(i => ({ itemId: i.item.id, itemName: i.item.name, quantity: i.qty, priceAtBooking: i.item.price })),
       startDate: newBooking.startDate, endDate: newBooking.endDate, status: BookingStatus.PENDING,
-      totalAmount, paidAmount: parseFloat(newBooking.paidAmount || '0'), notes: newBooking.notes, createdAt: new Date().toISOString()
+      totalAmount: isNaN(totalAmount) ? 0 : totalAmount,
+      paidAmount: 0, // Initial paid amount is 0 until Finance approves the transaction
+      notes: newBooking.notes,
+      createdAt: creationDate.toISOString()
     };
 
     saveBookings([booking, ...bookings]);
-    createAuditLog('CREATE_BOOKING', `Created booking #${booking.id} for ${booking.customerName}`);
+    createAuditLog('CREATE_BOOKING', `Created booking #${booking.id} for ${booking.customerName} (Date: ${newBooking.bookingDate})`);
 
     // Log initial payment if applicable
-    if (booking.paidAmount > 0) {
+    if (finalPaidAmount > 0) {
       createTransaction({
-        date: new Date().toISOString(),
-        amount: booking.paidAmount,
+        date: creationDate.toISOString(), // Match payment date to booking date
+        amount: finalPaidAmount,
         type: TransactionType.INCOME_RENTAL,
         description: `Down payment: #${booking.id} (Pending Finance Approval)`,
         bookingId: booking.id,
-        submittedBy: 'bookings-system'
+        submittedBy: user?.name || 'bookings-system'
       });
     }
 
-    setNewBooking({ customerId: '', startDate: '', endDate: '', selectedItems: [], notes: '', paidAmount: '' });
+    setNewBooking({ customerId: '', startDate: '', endDate: '', bookingDate: new Date().toISOString().split('T')[0], selectedItems: [], notes: '', paidAmount: '' });
     navigate('/bookings');
     refreshData();
     toastService.success("Dispatch Request Processed Successfully");
+    setIsSubmitting(false);
   };
 
   const updateStatus = (id: string, status: BookingStatus) => {
@@ -154,7 +199,8 @@ export const Bookings = () => {
     // Handle Return Logic
     if (status === BookingStatus.RETURNED && isBookingOverdue(b)) {
       setPaymentBooking(b);
-      setLateFeeAmount(calculateLateFee(b).toString());
+      // setLateFeeAmount(calculateLateFee(b).toString()); // Auto-calc disabled per request
+      setLateFeeAmount('0');
       setIsLateFeeModalOpen(true);
       return;
     }
@@ -190,16 +236,18 @@ export const Bookings = () => {
 
   const handleReportLoss = () => {
     if (!selectedLossItem || !lossAmount) return;
-    const amt = parseFloat(lossAmount || '0');
+    const amt = Math.abs(parseFloat(lossAmount || '0')); // Ensure positive value
 
     // Get the current booking to show updated balance
     const currentBookings = getBookings();
     const bookingToUpdate = currentBookings.find(b => b.id === selectedLossItem.bookingId);
     if (!bookingToUpdate) return;
 
-    const previousBalance = bookingToUpdate.totalAmount - bookingToUpdate.paidAmount;
-    const newTotalAmount = bookingToUpdate.totalAmount + amt;
-    const newOutstandingBalance = newTotalAmount - bookingToUpdate.paidAmount;
+    // Force totalAmount to be a number to prevent string concatenation
+    const currentTotal = Number(bookingToUpdate.totalAmount);
+    const paid = Number(bookingToUpdate.paidAmount);
+    const newTotalAmount = currentTotal + amt;
+    const newOutstandingBalance = newTotalAmount - paid;
 
     // 1. Inventory impact if it's a permanent loss
     if (penaltyType === 'LOSS') {
@@ -241,13 +289,13 @@ export const Bookings = () => {
 
   const handleLateFeeSubmit = () => {
     if (!paymentBooking) return;
-    const fee = parseFloat(lateFeeAmount || '0');
+    const fee = Math.abs(parseFloat(lateFeeAmount || '0'));
 
     const currentBookings = getBookings();
     const updated = currentBookings.map(b => b.id === paymentBooking.id ? {
       ...b,
       status: BookingStatus.RETURNED,
-      totalAmount: b.totalAmount + fee,
+      totalAmount: Number(b.totalAmount) + fee,
       lateFee: fee,
       penalties: [
         ...(b.penalties || []),
@@ -475,7 +523,7 @@ export const Bookings = () => {
                               className="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-rose-100 transition-all flex items-center gap-2"
                               title="Report Loss, Damage, or add a General Fee/Penalty"
                             >
-                              <AlertCircle size={12} /> Adjust Bill
+                              <AlertCircle size={12} /> Add Penalty / Loss
                             </button>
                           )}
                         </div>
@@ -549,47 +597,73 @@ export const Bookings = () => {
                       <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Deployment and extraction schedule</p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-10">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="space-y-4">
-                      <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest ml-1">Dispatch Arrival</label>
+                      <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest ml-1">Date of Booking</label>
+                      <div className="relative">
+                        <Calendar size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-purple-400" />
+                        <input
+                          type="date"
+                          className="w-full pl-12 pr-6 py-4 bg-stone-50 border border-stone-200 rounded-2xl font-bold text-sm outline-none focus:ring-4 focus:ring-purple-100"
+                          value={newBooking.bookingDate}
+                          onChange={e => setNewBooking({ ...newBooking, bookingDate: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest ml-1">Pickup Date</label>
                       <input
                         type="date"
                         className="w-full px-6 py-4 bg-stone-50 border border-stone-200 rounded-2xl font-bold text-sm outline-none focus:ring-4 focus:ring-purple-100"
                         value={newBooking.startDate}
                         onChange={e => {
                           const newStart = e.target.value;
-                          setNewBooking({ ...newBooking, startDate: newStart });
+                          let itemsChanged = false;
+                          let updatedItems = [...newBooking.selectedItems];
 
-                          // Re-validate all selected items against new dates
                           if (newStart && newBooking.endDate) {
-                            newBooking.selectedItems.forEach(selection => {
+                            updatedItems = updatedItems.map(selection => {
                               const avail = checkAvailability(selection.item.id, newStart, newBooking.endDate);
-                              if (avail < selection.qty) {
-                                toastService.warning(`Stock Change: Only ${avail} units of ${selection.item.name} are available for the new selected period.`);
+                              if (selection.qty > avail) {
+                                itemsChanged = true;
+                                return { ...selection, qty: Math.max(0, avail) }; // Clamp to available or 0
                               }
-                            });
+                              return selection;
+                            }).filter(x => x.qty > 0); // Remove items that became 0
+                          }
+
+                          setNewBooking({ ...newBooking, startDate: newStart, selectedItems: updatedItems });
+                          if (itemsChanged) {
+                            toastService.info("Stock Adjusted: Some item quantities were reduced based on availability for the new dates.");
                           }
                         }}
                       />
                     </div>
                     <div className="space-y-4">
-                      <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest ml-1">Asset Extraction</label>
+                      <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest ml-1">Return Date</label>
                       <input
                         type="date"
                         className="w-full px-6 py-4 bg-stone-50 border border-stone-200 rounded-2xl font-bold text-sm outline-none focus:ring-4 focus:ring-purple-100"
                         value={newBooking.endDate}
                         onChange={e => {
                           const newEnd = e.target.value;
-                          setNewBooking({ ...newBooking, endDate: newEnd });
+                          let itemsChanged = false;
+                          let updatedItems = [...newBooking.selectedItems];
 
-                          // Re-validate all selected items against new dates
                           if (newBooking.startDate && newEnd) {
-                            newBooking.selectedItems.forEach(selection => {
+                            updatedItems = updatedItems.map(selection => {
                               const avail = checkAvailability(selection.item.id, newBooking.startDate, newEnd);
-                              if (avail < selection.qty) {
-                                toastService.warning(`Stock Change: Only ${avail} units of ${selection.item.name} are available for the new selected period.`);
+                              if (selection.qty > avail) {
+                                itemsChanged = true;
+                                return { ...selection, qty: Math.max(0, avail) };
                               }
-                            });
+                              return selection;
+                            }).filter(x => x.qty > 0);
+                          }
+
+                          setNewBooking({ ...newBooking, endDate: newEnd, selectedItems: updatedItems });
+                          if (itemsChanged) {
+                            toastService.info("Stock Adjusted: Some item quantities were reduced based on availability for the new dates.");
                           }
                         }}
                       />
@@ -659,8 +733,8 @@ export const Bookings = () => {
                               <p className="text-xs font-bold text-stone-800">{item.name}</p>
                               <div className="flex items-center gap-2 mt-0.5">
                                 <span className="text-[9px] font-bold text-stone-400 uppercase tracking-tighter">₵{item.price} / day</span>
-                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-lg border ${availableQty > 0 ? 'text-purple-600 bg-purple-50 border-purple-100' : 'text-rose-600 bg-rose-50 border-rose-100'}`}>
-                                  {availableQty} Avail.
+                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-lg border ${availableQty - (selected?.qty || 0) > 0 ? 'text-purple-600 bg-purple-50 border-purple-100' : 'text-rose-600 bg-rose-50 border-rose-100'}`}>
+                                  {Math.max(0, availableQty - (selected?.qty || 0))} Avail.
                                 </span>
                                 {!isAvailableStatus && (
                                   <span className="text-[8px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-lg uppercase border border-amber-100">{item.status}</span>
@@ -835,19 +909,20 @@ export const Bookings = () => {
                   <div className="mt-10 grid grid-cols-1 gap-4">
                     <button
                       onClick={handleCreateBooking}
-                      // Remove disabled state to allow clicking and showing validation errors
-                      // disabled={newBooking.selectedItems.length === 0 || !newBooking.customerId}
+                      disabled={isSubmitting}
                       className={`w-full py-5 rounded-2xl font-bold text-xs uppercase tracking-[0.2em] shadow-2xl transition group flex items-center justify-center
                         ${(newBooking.selectedItems.length > 0 && newBooking.customerId && newBooking.startDate && newBooking.endDate)
                           ? 'bg-purple-600 hover:bg-purple-500 text-white cursor-pointer'
-                          : 'bg-stone-200 text-stone-400 cursor-not-allowed hover:bg-rose-100 hover:text-rose-500' // Visual cue but clickable for feedback
-                        }`}
+                          : 'bg-stone-200 text-stone-400 cursor-not-allowed hover:bg-rose-100 hover:text-rose-500'}
+                        ${isSubmitting ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}
+                      `}
                     >
-                      Process Dispatch Request <ChevronRight size={14} className="inline-block ml-2 group-hover:translate-x-1 transition-transform" />
+                      {isSubmitting ? 'Processing...' : <>Process Dispatch Request <ChevronRight size={14} className="inline-block ml-2 group-hover:translate-x-1 transition-transform" /></>}
                     </button>
-                    <button onClick={() => navigate('/bookings')} className="py-2 text-[10px] font-bold uppercase text-white/30 hover:text-white transition-colors tracking-widest">Cancel Order</button>
+                    <button type="button" onClick={() => navigate('/bookings')} className="py-2 text-[10px] font-bold uppercase text-white/30 hover:text-white transition-colors tracking-widest">Cancel Order</button>
                     <button
-                      onClick={() => setNewBooking({ customerId: '', startDate: '', endDate: '', selectedItems: [], notes: '', paidAmount: '' })}
+                      type="button"
+                      onClick={() => setNewBooking({ customerId: '', startDate: '', endDate: '', bookingDate: new Date().toISOString().split('T')[0], selectedItems: [], notes: '', paidAmount: '' })}
                       className="py-2 text-[10px] font-bold uppercase text-rose-300 hover:text-rose-100 transition-colors tracking-widest"
                     >
                       Reset Form
@@ -877,10 +952,10 @@ export const Bookings = () => {
               <div>
                 <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block mb-2 ml-1">Applied Penalty (GH₵)</label>
                 <input type="number" step="0.01" min="0" className="w-full px-6 py-4 bg-stone-50 border border-stone-200 rounded-2xl font-bold text-xl text-purple-600 outline-none focus:ring-4 focus:ring-purple-100" value={lateFeeAmount} onChange={e => setLateFeeAmount(e.target.value)} />
-                <p className="text-[9px] font-bold text-stone-400 mt-2 ml-2">System calculated based on 50% daily rate.</p>
+                <p className="text-[9px] font-bold text-stone-400 mt-2 ml-2">Enter penalty amount manually (Default is 0 to waive).</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <button onClick={() => { setIsLateFeeModalOpen(false); setPaymentBooking(null); }} className="py-4 font-bold text-stone-400 text-[10px] uppercase tracking-widest">Cancel</button>
+                <button type="button" onClick={() => { setIsLateFeeModalOpen(false); setPaymentBooking(null); }} className="py-4 font-bold text-stone-400 text-[10px] uppercase tracking-widest">Cancel</button>
                 <button onClick={handleLateFeeSubmit} className="py-4 bg-purple-600 text-white rounded-2xl font-bold text-[10px] uppercase tracking-widest shadow-xl hover:bg-purple-700 transition">Confirm Return & Fee</button>
               </div>
             </div>
@@ -905,7 +980,7 @@ export const Bookings = () => {
                 <p className="text-xs font-bold text-purple-900">This transaction will be logged and the client profile updated.</p>
               </div>
               <div className="grid grid-cols-2 gap-4 pt-4">
-                <button onClick={() => { setIsPaymentModalOpen(false); setPaymentBooking(null); }} className="py-4 font-bold text-stone-400 text-[10px] uppercase tracking-widest">Abort</button>
+                <button type="button" onClick={() => { setIsPaymentModalOpen(false); setPaymentBooking(null); }} className="py-4 font-bold text-stone-400 text-[10px] uppercase tracking-widest">Abort</button>
                 <button onClick={() => {
                   const amt = parseFloat(paymentAmount);
                   // We no longer update booking.paidAmount immediately. 
@@ -1004,7 +1079,7 @@ export const Bookings = () => {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <button onClick={() => setIsLossModalOpen(false)} className="py-4 font-bold text-stone-400 text-[10px] uppercase tracking-widest">Abort</button>
+                <button type="button" onClick={() => setIsLossModalOpen(false)} className="py-4 font-bold text-stone-400 text-[10px] uppercase tracking-widest">Abort</button>
                 <button onClick={handleReportLoss} className="py-4 bg-purple-600 text-white rounded-2xl font-bold text-[10px] uppercase tracking-widest shadow-xl hover:bg-purple-700 transition">Confirm Penalty</button>
               </div>
             </div>
@@ -1113,41 +1188,46 @@ export const Bookings = () => {
 
                   <div className="flex justify-end mb-16">
                     <div className="w-80 space-y-3">
-                      {/* 1. Base Rental Cost */}
-                      <div className="flex justify-between items-center text-sm font-bold text-stone-500">
-                        <span>Base Rental Cost</span>
-                        <span>₵{paymentBooking.items.reduce((a, c) => a + (c.priceAtBooking * c.quantity * (Math.ceil((new Date(paymentBooking.endDate).getTime() - new Date(paymentBooking.startDate).getTime()) / (1000 * 60 * 60 * 24)) || 1)), 0).toLocaleString()}</span>
-                      </div>
+                      {/* Calculated Definitions */}
+                      {(() => {
+                        const days = Math.ceil((new Date(paymentBooking.endDate).getTime() - new Date(paymentBooking.startDate).getTime()) / (1000 * 60 * 60 * 24)) || 1;
+                        const itemTotal = paymentBooking.items.reduce((a, c) => a + (c.priceAtBooking * c.quantity * days), 0);
+                        const penaltyTotal = paymentBooking.penalties ? paymentBooking.penalties.reduce((a, p) => a + p.amount, 0) : 0;
+                        const grandTotal = itemTotal + penaltyTotal;
 
-                      {/* 2. Operations Duration Note */}
-                      <div className="flex justify-end text-[10px] font-bold text-stone-400 uppercase tracking-widest -mt-2 mb-2">
-                        (Duration: {Math.ceil((new Date(paymentBooking.endDate).getTime() - new Date(paymentBooking.startDate).getTime()) / (1000 * 60 * 60 * 24)) || 1} Days)
-                      </div>
-
-                      {/* 3. Detailed Penalties & Fees */}
-                      {paymentBooking.penalties && paymentBooking.penalties.length > 0 && (
-                        <div className="space-y-2">
-                          <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest border-t border-stone-100 pt-3 mb-2">Penalties & Adjustments</p>
-                          {paymentBooking.penalties.map((p, i) => (
-                            <div key={i} className="flex justify-between items-center text-sm font-bold text-rose-600">
-                              <span>{p.description}</span>
-                              <span>+ ₵{p.amount.toLocaleString()}</span>
+                        return (
+                          <>
+                            {/* 1. Item Total */}
+                            <div className="flex justify-between items-center text-sm font-bold text-stone-500">
+                              <span>Total Amount of Items</span>
+                              <span>₵{itemTotal.toLocaleString()}</span>
                             </div>
-                          ))}
-                        </div>
-                      )}
 
-                      <div className="h-px bg-stone-200 my-2"></div>
+                            {/* 2. Operations Duration Note */}
+                            <div className="flex justify-end text-[10px] font-bold text-stone-400 uppercase tracking-widest -mt-2 mb-2">
+                              (Duration: {days} Days)
+                            </div>
 
-                      {/* 4. Grand Total */}
-                      <div className="flex justify-between items-center">
-                        <span className="text-lg font-bold text-stone-900 tracking-tight">Total Obligation</span>
-                        <span className="text-2xl font-bold text-purple-600 tracking-tighter">₵{paymentBooking.totalAmount.toLocaleString()}</span>
-                      </div>
+                            {/* 3. Penalties */}
+                            <div className={`flex justify-between items-center text-sm font-bold ${penaltyTotal > 0 ? 'text-rose-600' : 'text-stone-400'}`}>
+                              <span>Total Amount of Penalties</span>
+                              <span>{penaltyTotal > 0 ? '+' : ''} ₵{penaltyTotal.toLocaleString()}</span>
+                            </div>
+
+                            <div className="h-px bg-stone-200 my-2"></div>
+
+                            {/* 4. Grand Total */}
+                            <div className="flex justify-between items-center">
+                              <span className="text-lg font-bold text-stone-900 tracking-tight">Grand Total</span>
+                              <span className="text-2xl font-bold text-purple-600 tracking-tighter">₵{grandTotal.toLocaleString()}</span>
+                            </div>
+                          </>
+                        )
+                      })()}
 
                       {/* 5. Payments */}
                       <div className="flex justify-between items-center text-sm font-bold text-stone-500">
-                        <span>Amount Paid</span>
+                        <span>Total Paid by Client</span>
                         <span>- ₵{paymentBooking.paidAmount.toLocaleString()}</span>
                       </div>
 

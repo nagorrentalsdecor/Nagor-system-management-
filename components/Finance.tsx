@@ -141,11 +141,12 @@ export const Finance = () => {
 
       // Role-based transaction visibility
       const visibleTransactions = transactionsData.filter(t => {
-        // Users with permission can see all (including Pending)
-        if (currentUser.permissions.canViewPendingTransactions) return true;
+        // Privileged users see all transactions
+        const isPrivileged = [UserRole.ADMIN, UserRole.MANAGER, UserRole.FINANCE].includes(currentUser.role);
+        if (isPrivileged) return true;
 
-        // Other users can only see approved transactions
-        return t.status === TransactionStatus.APPROVED;
+        // Other users (Sales, etc.) only see their own transactions
+        return t.submittedBy === currentUser.name;
       });
 
       setTransactions(visibleTransactions);
@@ -308,7 +309,7 @@ export const Finance = () => {
       date: new Date(transactionForm.date).toISOString(),
       propertyId: transactionForm.propertyId || undefined,
       referenceNumber: transactionForm.referenceNumber || undefined,
-      submittedBy: transactionForm.submittedBy,
+      submittedBy: currentUser.name,
     });
     refreshData();
     setIsModalOpen(false);

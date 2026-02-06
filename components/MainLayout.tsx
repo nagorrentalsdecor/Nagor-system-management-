@@ -118,16 +118,7 @@ export const MainLayout: React.FC<LayoutProps> = ({ children }) => {
           </div>
           {/* Nav Section */}
           <div className="flex-1 px-4 overflow-y-auto no-scrollbar space-y-10 py-4">
-            {/* Quick Commands */}
-            <div className="px-5 space-y-4">
-              <p className="text-[10px] font-bold text-purple-300/70 uppercase tracking-widest">Quick Commands</p>
-              <div className="grid grid-cols-2 gap-2">
-                <QuickAction icon={Plus} label="New Booking" onClick={() => { setSidebarOpen(false); navigate('/bookings/new'); }} color="bg-purple-500" />
-                <QuickAction icon={UserPlus} label="Add Partner" onClick={() => { setSidebarOpen(false); navigate('/customers/add'); }} color="bg-purple-400" />
-                <QuickAction icon={CreditCard} label="Payment" onClick={() => { setSidebarOpen(false); navigate('/finance/new'); }} color="bg-purple-600" />
-                <QuickAction icon={Package} label="Add Item" onClick={() => { setSidebarOpen(false); navigate('/inventory/add'); }} color="bg-purple-300" />
-              </div>
-            </div>
+
 
             {/* Navigation Groups */}
             <div className="space-y-2">

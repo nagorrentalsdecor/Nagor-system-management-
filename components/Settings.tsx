@@ -400,8 +400,8 @@ export const Settings = () => {
     { id: 'general', label: 'General', icon: <SettingsIcon className="h-4 w-4 mr-2" /> },
     { id: 'users', label: 'Users & Permissions', icon: <UserCog className="h-4 w-4 mr-2" /> },
     { id: 'notifications', label: 'Notifications', icon: <Bell className="h-4 w-4 mr-2" /> },
-    { id: 'billing', label: 'Billing & Payments', icon: <CreditCard className="h-4 w-4 mr-2" /> },
-    { id: 'invoices', label: 'Invoices & Receipts', icon: <FileText className="h-4 w-4 mr-2" /> },
+
+
     { id: 'team', label: 'Team Settings', icon: <Users className="h-4 w-4 mr-2" /> },
     { id: 'data', label: 'Data Management', icon: <Database className="h-4 w-4 mr-2" /> },
     { id: 'logs', label: 'System Activity', icon: <Clock className="h-4 w-4 mr-2" /> },
@@ -658,6 +658,7 @@ export const Settings = () => {
 
                 <div className="flex gap-3">
                   <button
+                    type="button"
                     onClick={() => setShowUserModal(false)}
                     className="flex-1 px-4 py-2 bg-stone-200 text-stone-700 rounded-lg font-bold hover:bg-stone-300 transition"
                   >

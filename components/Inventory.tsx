@@ -249,7 +249,7 @@ export const Inventory = () => {
       {/* Control Bar */}
       <GlassCard className="p-6">
         <div className="flex flex-col lg:flex-row justify-between gap-6 items-center">
-          <div className="flex gap-2 bg-stone-100 p-1.5 rounded-[1.5rem] overflow-x-auto no-scrollbar w-full lg:w-auto">
+          <div className="flex gap-2 bg-stone-100 p-1.5 rounded-[1.5rem] overflow-x-auto w-full">
             {categories.map(cat => (
               <button
                 key={cat}

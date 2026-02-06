@@ -464,7 +464,7 @@ export const Customers = () => {
                 <h3 className="text-3xl font-bold text-stone-900 tracking-tighter">{editingCustomer ? 'Refine Profile' : 'Onboard Partner'}</h3>
                 <p className="text-xs font-bold text-stone-400 uppercase tracking-[0.1em] mt-1">CRM Registration Protocol</p>
               </div>
-              <button onClick={closeModal} className="w-12 h-12 rounded-full border border-stone-200 bg-white flex items-center justify-center text-stone-400 hover:text-stone-900 transition shadow-sm">
+              <button type="button" onClick={closeModal} className="w-12 h-12 rounded-full border border-stone-200 bg-white flex items-center justify-center text-stone-400 hover:text-stone-900 transition shadow-sm">
                 <Plus size={24} className="rotate-45" />
               </button>
             </div>
@@ -638,7 +638,7 @@ export const Customers = () => {
                 >
                   <Printer size={16} /> Execute Print
                 </button>
-                <button onClick={() => setViewingStatement(null)} className="w-12 h-12 rounded-full border border-stone-200 bg-white flex items-center justify-center text-stone-400 hover:text-stone-900 transition"><Plus size={24} className="rotate-45" /></button>
+                <button type="button" onClick={() => setViewingStatement(null)} className="w-12 h-12 rounded-full border border-stone-200 bg-white flex items-center justify-center text-stone-400 hover:text-stone-900 transition"><Plus size={24} className="rotate-45" /></button>
               </div>
             </div>
 

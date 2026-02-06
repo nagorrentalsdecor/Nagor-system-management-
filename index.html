@@ -15,20 +15,23 @@
       -moz-osx-font-smoothing: grayscale;
     }
   </style>
-  <script type="importmap">
-{
-  "imports": {
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "recharts": "https://esm.sh/recharts@^3.6.0",
-    "@google/genai": "https://esm.sh/@google/genai@^1.37.0",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react-router-dom": "https://esm.sh/react-router-dom@^7.12.0",
-    "date-fns": "https://esm.sh/date-fns@^4.1.0"
-  }
-}
-</script>
+  <script>
+    window.onerror = function (msg, url, line, col, error) {
+      const div = document.createElement('div');
+      div.style.position = 'fixed';
+      div.style.top = '0';
+      div.style.left = '0';
+      div.style.width = '100%';
+      div.style.backgroundColor = '#ef4444';
+      div.style.color = 'white';
+      div.style.zIndex = '999999';
+      div.style.padding = '20px';
+      div.style.fontFamily = 'monospace';
+      div.style.whiteSpace = 'pre-wrap';
+      div.textContent = 'CRITICAL ERROR: ' + msg + '\nLocation: ' + url + ':' + line + ':' + col + '\n\n' + (error ? error.stack : '');
+      document.body.appendChild(div);
+    };
+  </script>
 </head>
 
 <body class="bg-[#F8F9FA] text-stone-900 selection:bg-purple-100 selection:text-purple-900">

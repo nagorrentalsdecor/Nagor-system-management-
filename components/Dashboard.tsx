@@ -31,21 +31,31 @@ import {
   Legend
 } from 'recharts';
 import { getDashboardMetrics, getTransactions, getBookings, isBookingOverdue, getApprovedTransactions } from '../services/db';
-import { DashboardMetrics, Transaction, Booking, BookingStatus } from '../types';
+import { DashboardMetrics, Transaction, Booking, BookingStatus, UserRole } from '../types';
+
+import { AuthContext } from '../App';
 
 export const Dashboard = () => {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [revenueData, setRevenueData] = useState<any[]>([]);
   const [recentBookings, setRecentBookings] = useState<Booking[]>([]);
   const [dueReturns, setDueReturns] = useState<Booking[]>([]);
+  const { user } = React.useContext(AuthContext);
 
   useEffect(() => {
     const refreshDashboardData = () => {
-      const data = getDashboardMetrics();
+      // 1. Get Metrics with User Context
+      const data = getDashboardMetrics(user || undefined);
       setMetrics(data);
 
-      // Use only approved transactions for revenue calculations
-      const approvedTransactions = getApprovedTransactions();
+      // 2. Calculate Chart Data with User Context
+      let approvedTransactions = getApprovedTransactions();
+
+      // Filter transactions for chart if restricted user
+      if (user && ![UserRole.ADMIN, UserRole.MANAGER, UserRole.FINANCE].includes(user.role)) {
+        approvedTransactions = approvedTransactions.filter(t => t.submittedBy === user.name);
+      }
+
       const last7Days = Array.from({ length: 7 }, (_, i) => {
         const d = new Date();
         d.setDate(d.getDate() - (6 - i));

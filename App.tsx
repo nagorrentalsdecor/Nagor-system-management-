@@ -65,21 +65,25 @@ export default function App() {
   useEffect(() => {
     // Initialize mock DB & Supabase Cache
     const init = async () => {
-      await initializeData();
-      await seedDatabase();
+      try {
+        await initializeData();
+        await seedDatabase();
 
-      // Check for existing session
-      const employeeData = sessionStorage.getItem('currentEmployee');
-      if (employeeData) {
-        try {
-          const emp = JSON.parse(employeeData);
-          setUser({ name: emp.name, role: emp.role });
-        } catch (e) {
-          sessionStorage.removeItem('currentEmployee');
+        // Check for existing session
+        const employeeData = sessionStorage.getItem('currentEmployee');
+        if (employeeData) {
+          try {
+            const emp = JSON.parse(employeeData);
+            setUser({ name: emp.name, role: emp.role });
+          } catch (e) {
+            sessionStorage.removeItem('currentEmployee');
+          }
         }
+      } catch (err) {
+        console.error("Initialization Failed:", err);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
     init();
   }, []);

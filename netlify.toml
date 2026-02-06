@@ -1,0 +1,41 @@
+# Netlify Configuration for Nagor Rentals Manager (Vite/React)
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# --- SPA Fallback ---
+# Ensures that refreshing a page like /bookings doesn't result in 404
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# --- Aggressive Caching for Performance ---
+# Cache static assets (hashed by Vite) forever
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Cache images and fonts
+[[headers]]
+  for = "/*.png"
+  [headers.values]
+    Cache-Control = "public, max-age=604800, stale-while-revalidate=86400"
+
+[[headers]]
+  for = "/*.jpg"
+  [headers.values]
+    Cache-Control = "public, max-age=604800, stale-while-revalidate=86400"
+
+[[headers]]
+  for = "/*.svg"
+  [headers.values]
+    Cache-Control = "public, max-age=604800, stale-while-revalidate=86400"
+
+# Main HTML file - check for updates frequently but allow short cache
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
