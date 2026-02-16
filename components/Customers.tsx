@@ -30,6 +30,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Customer, Booking } from '../types';
 import { getCustomers, saveCustomers, getBookings, createAuditLog } from '../services/db';
 import { toastService } from '../services/toast';
+import { ImageCapture } from './ImageCapture';
 
 
 const GlassCard = ({ children, className = "" }: any) => (
@@ -557,28 +558,13 @@ export const Customers = () => {
                       />
                     </div>
                   </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block mb-1.5 ml-1">ID Document (Ghana Card / Passport)</label>
-                    <div className="flex items-center gap-6">
-                      <div className="flex-1 bg-stone-50 border-2 border-dashed border-stone-200 rounded-[2rem] h-32 flex flex-col items-center justify-center relative group overflow-hidden">
-                        {formData.idCardUrl ? (
-                          <img src={formData.idCardUrl} className="w-full h-full object-cover" />
-                        ) : (
-                          <>
-                            <Upload className="text-stone-300 mb-2" />
-                            <span className="text-[10px] font-bold text-stone-400 uppercase">Upload ID Photo</span>
-                          </>
-                        )}
-                        <input
-                          type="file" accept="image/*"
-                          className="absolute inset-0 opacity-0 cursor-pointer"
-                          onChange={(e) => handleFileUpload(e, 'idCardUrl')}
-                        />
-                      </div>
-                      {formData.idCardUrl && (
-                        <button type="button" onClick={() => setFormData({ ...formData, idCardUrl: '' })} className="text-rose-500 font-bold text-xs">Remove</button>
-                      )}
-                    </div>
+                  <div className="pt-4">
+                    <ImageCapture
+                      label="ID Document (Ghana Card / Passport)"
+                      currentImage={formData.idCardUrl}
+                      onImageCaptured={(img) => setFormData({ ...formData, idCardUrl: img })}
+                      aspectRatio="video"
+                    />
                   </div>
                 </div>
               )}

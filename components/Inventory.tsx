@@ -19,12 +19,14 @@ import {
   ChevronRight,
   Filter,
   Upload,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Camera
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Item, ItemStatus, BookingStatus } from '../types';
 import { getItems, saveItems, getBookings, createAuditLog, deleteItem as deleteItemFromDb } from '../services/db';
 import { toastService } from '../services/toast';
+import { ImageCapture } from './ImageCapture';
 
 
 const GlassCard = ({ children, className = "" }: any) => (
@@ -401,32 +403,16 @@ export const Inventory = () => {
             <form onSubmit={handleSave} className="p-8 space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="md:col-span-2">
-                  <div className="flex gap-6 items-start">
-                    <div className="relative group w-32 h-32 rounded-2xl bg-stone-100 border-2 border-dashed border-stone-200 flex items-center justify-center overflow-hidden shrink-0">
-                      {formData.imageUrl ? (
-                        <img src={formData.imageUrl} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="text-center p-2">
-                          <Upload className="w-6 h-6 mx-auto text-stone-300 mb-1" />
-                          <span className="text-[8px] font-bold text-stone-400 uppercase">Add Photo</span>
-                        </div>
-                      )}
-                      <input
-                        type="file" accept="image/*"
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                        onChange={handleFileUpload}
+                  <div className="flex gap-8 items-start">
+                    <div className="w-48 shrink-0">
+                      <ImageCapture
+                        label="Asset Photo"
+                        currentImage={formData.imageUrl}
+                        onImageCaptured={(img) => setFormData({ ...formData, imageUrl: img })}
+                        aspectRatio="square"
                       />
-                      {formData.imageUrl && (
-                        <button
-                          type="button"
-                          onClick={(e) => { e.preventDefault(); setFormData({ ...formData, imageUrl: '' }) }}
-                          className="absolute top-1 right-1 bg-white/80 p-1 rounded-full text-purple-600 hover:bg-purple-50"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      )}
                     </div>
-                    <div className="flex-1 space-y-4">
+                    <div className="flex-1 space-y-6">
                       <div>
                         <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block mb-2">Item Designation</label>
                         <input

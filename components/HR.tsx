@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Employee, UserRole, EmployeeStatus, PayrollRun, PayrollStatus, PayrollItem } from '../types';
 import { getEmployees, saveEmployees, getPayrollRuns, savePayrollRuns, resetUserPassword, createAuditLog, generateUUID } from '../services/db';
+import { ImageCapture } from './ImageCapture';
 
 type ActionType = 'EDIT' | 'FINANCE' | 'LEAVE' | 'PERFORMANCE' | 'STATUS' | 'PAYROLL' | 'RESET_PASSWORD' | 'PENALTY' | null;
 
@@ -516,11 +517,15 @@ export const HR = () => {
                 {activeAction === 'EDIT' && (
                   <form onSubmit={handleSubmit} className="space-y-8">
                     <div className="flex flex-col items-center mb-8">
-                      <div className="relative group w-24 h-24 rounded-[2rem] bg-stone-50 border-2 border-dashed border-stone-200 flex items-center justify-center overflow-hidden hover:border-purple-400 transition-colors">
-                        {formData.photoUrl ? <img src={formData.photoUrl} className="w-full h-full object-cover" /> : <Camera className="text-stone-300" size={32} />}
-                        <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => handleFileChange(e, 'photoUrl')} />
+                      <div className="w-48 h-48">
+                        <ImageCapture
+                          label="Identification Photo"
+                          currentImage={formData.photoUrl}
+                          onImageCaptured={(img) => setFormData({ ...formData, photoUrl: img })}
+                          aspectRatio="square"
+                        />
                       </div>
-                      <p className="text-[9px] font-bold text-stone-400 uppercase tracking-widest mt-3">Upload Identification Photo</p>
+                      <p className="text-[9px] font-bold text-stone-400 uppercase tracking-widest mt-3 whitespace-nowrap">Upload or Capture Staff Identity Photo</p>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       <div className="col-span-1 sm:col-span-2">
@@ -561,18 +566,20 @@ export const HR = () => {
                       </div>
                       <div className="grid grid-cols-2 gap-4 col-span-1 sm:col-span-2 pb-2">
                         <div className="space-y-2">
-                          <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block ml-1">Ghana Card (Front)</label>
-                          <div className="relative h-32 rounded-3xl bg-stone-50 border-2 border-dashed border-stone-200 flex items-center justify-center overflow-hidden hover:border-purple-200 transition-colors">
-                            {formData.ghanaCardFrontUrl ? <img src={formData.ghanaCardFrontUrl} className="w-full h-full object-cover" /> : <div className="text-center"><Upload className="mx-auto text-stone-300" size={20} /><p className="text-[8px] font-bold text-stone-400 mt-1 uppercase">Front View</p></div>}
-                            <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => handleFileChange(e, 'ghanaCardFrontUrl')} />
-                          </div>
+                          <ImageCapture
+                            label="Ghana Card (Front)"
+                            currentImage={formData.ghanaCardFrontUrl}
+                            onImageCaptured={(img) => setFormData({ ...formData, ghanaCardFrontUrl: img })}
+                            aspectRatio="video"
+                          />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block ml-1">Ghana Card (Back)</label>
-                          <div className="relative h-32 rounded-3xl bg-stone-50 border-2 border-dashed border-stone-200 flex items-center justify-center overflow-hidden hover:border-purple-200 transition-colors">
-                            {formData.ghanaCardBackUrl ? <img src={formData.ghanaCardBackUrl} className="w-full h-full object-cover" /> : <div className="text-center"><Upload className="mx-auto text-stone-300" size={20} /><p className="text-[8px] font-bold text-stone-400 mt-1 uppercase">Rear View</p></div>}
-                            <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => handleFileChange(e, 'ghanaCardBackUrl')} />
-                          </div>
+                          <ImageCapture
+                            label="Ghana Card (Back)"
+                            currentImage={formData.ghanaCardBackUrl}
+                            onImageCaptured={(img) => setFormData({ ...formData, ghanaCardBackUrl: img })}
+                            aspectRatio="video"
+                          />
                         </div>
                       </div>
                       <div className="col-span-1 sm:col-span-2 p-5 bg-stone-50 rounded-3xl border border-stone-100">

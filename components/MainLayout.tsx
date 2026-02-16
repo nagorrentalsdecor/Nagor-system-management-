@@ -121,47 +121,42 @@ export const MainLayout: React.FC<LayoutProps> = ({ children }) => {
 
 
             {/* Navigation Groups */}
-            <div className="space-y-2">
-              <p className="px-5 text-xs font-bold text-purple-300/70 uppercase tracking-widest mb-4">Operations Hub</p>
-              {navItems.map((item) => (
-                canAccess(item.roles) && (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    onClick={() => setSidebarOpen(false)}
-                    className={({ isActive }) =>
-                      `group flex items-center px-5 py-3 text-sm font-bold rounded-2xl transition-all duration-300 relative overflow-hidden ${isActive
-                        ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20'
-                        : 'text-purple-200/70 hover:text-white hover:bg-white/5'
-                      }`
-                    }
-                  >
-                    <item.icon className={`mr-4 h-5 w-5 transition-colors ${location.pathname === item.to ? 'text-white' : 'text-purple-300/50 group-hover:text-purple-300'}`} />
-                    <span className="relative z-10">{item.label}</span>
-                    {location.pathname === item.to && <div className="absolute right-4 w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>}
-                  </NavLink>
-                )
-              ))}
-            </div>
+            <div className="space-y-4">
+              <div className="px-6 flex items-center justify-between">
+                <p className="text-[10px] font-bold text-purple-400 uppercase tracking-[0.2em] opacity-80">Operations Hub</p>
+                <div className="h-[1px] flex-1 bg-gradient-to-r from-purple-500/20 to-transparent ml-4" />
+              </div>
+              <div className="space-y-2">
+                {navItems.map((item) => (
+                  canAccess(item.roles) && (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      onClick={() => setSidebarOpen(false)}
+                      className={({ isActive }) =>
+                        `group flex items-center px-6 py-4 text-sm font-bold rounded-[1.25rem] transition-all duration-500 relative overflow-hidden backdrop-blur-sm ${isActive
+                          ? 'bg-white/10 text-white shadow-[0_10px_30px_rgba(0,0,0,0.2)] border border-white/20'
+                          : 'text-purple-200/50 hover:text-white hover:bg-white/5 border border-transparent hover:border-white/5'
+                        }`
+                      }
+                    >
+                      {/* Active Background Glow */}
+                      {location.pathname === item.to && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-transparent animate-pulse" />
+                      )}
 
-            {/* Intelligence area */}
-            <div className="px-4">
-              <div className="p-6 rounded-[2rem] bg-purple-800/20 border border-white/5 space-y-4">
-                <div className="flex items-center gap-2 text-xs font-bold text-purple-400 uppercase tracking-widest">
-                  <ShieldCheck size={14} /> System Secure
-                </div>
-                <div className="space-y-2">
-                  {getBookings().filter(b => isBookingOverdue(b)).length > 0 && (
-                    <div className="flex items-center gap-2 text-xs font-bold text-purple-400">
-                      <AlertCircle size={12} /> {getBookings().filter(b => isBookingOverdue(b)).length} Breaches found
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2 text-xs font-bold text-purple-300/50">
-                    <ListChecks size={12} /> Sync complete
-                  </div>
-                </div>
+                      <item.icon className={`mr-4 h-5 w-5 transition-all duration-700 ${location.pathname === item.to ? 'text-white scale-110 drop-shadow-[0_0_10px_rgba(147,51,234,0.8)]' : 'text-purple-300/40 group-hover:text-purple-300 group-hover:scale-110'}`} />
+                      <span className="relative z-10 transition-transform duration-500 group-hover:translate-x-1">{item.label}</span>
+
+                      {location.pathname === item.to && (
+                        <div className="absolute right-6 w-1.5 h-1.5 bg-white rounded-full shadow-[0_0_15px_#fff] animate-pulse"></div>
+                      )}
+                    </NavLink>
+                  )
+                ))}
               </div>
             </div>
+
           </div>
 
           {/* User Profile Area */}
