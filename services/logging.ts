@@ -39,7 +39,7 @@ export const activityLogger = {
   // Log an activity
   log: (activity: Omit<ActivityLog, 'id' | 'timestamp'>) => {
     const logs = activityLogger.getLogs();
-    
+
     const newLog: ActivityLog = {
       ...activity,
       id: Math.random().toString(36).substr(2, 9),
@@ -96,10 +96,10 @@ export const activityLogger = {
   clearOldLogs: (days: number) => {
     const cutoffTime = new Date();
     cutoffTime.setDate(cutoffTime.getDate() - days);
-    
+
     const logs = activityLogger.getLogs();
     const filtered = logs.filter(log => new Date(log.timestamp) > cutoffTime);
-    
+
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
   },
 
@@ -138,7 +138,7 @@ export const activityLogger = {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    
+
     link.setAttribute('href', url);
     link.setAttribute('download', filename);
     link.style.visibility = 'hidden';

@@ -35,6 +35,50 @@ const GlassCard = ({ children, className = "" }: any) => (
   </div>
 );
 
+// Color mapping helper
+const getColorHex = (colorName: string): string => {
+  const colorMap: Record<string, string> = {
+    'Red': '#EF4444',
+    'Blue': '#3B82F6',
+    'Sea-Blue': '#06B6D4',
+    'Navy-Blue': '#1E3A8A',
+    'Royal-Blue': '#2563EB',
+    'Silver': '#C0C0C0',
+    'Rose-Gold': '#B76E79',
+    'Green': '#22C55E',
+    'Emerald-Green': '#10B981',
+    'Leaf-Green': '#84CC16',
+    'Mint-Green': '#6EE7B7',
+    'Lemon-Green': '#BEF264',
+    'Olive-Green': '#808000',
+    'Yellow': '#EAB308',
+    'Orange': '#F97316',
+    'Burnt-Orange': '#C2410C',
+    'Purple': '#A855F7',
+    'Lilac': '#C4B5FD',
+    'Pink': '#EC4899',
+    'Hot-Pink': '#FF1493',
+    'Yogurt': '#FFF5E1',
+    'Brown': '#92400E',
+    'Coffee': '#6F4E37',
+    'Tan': '#D2B48C',
+    'Light-Brown': '#C19A6B',
+    'Off-White': '#FAF9F6',
+    'Black': '#000000',
+    'White': '#FFFFFF',
+    'Gray': '#6B7280',
+    'Gold': '#FFD700',
+    'Beige': '#F5F5DC',
+    'Cream': '#FFFDD0',
+    'Multi-Color': 'linear-gradient(90deg, #EF4444, #F97316, #EAB308, #22C55E, #3B82F6, #A855F7)',
+    'Wine': '#722F37',
+    'Burgundy': '#800020',
+    'Peach': '#FFE5B4',
+    'Coral': '#FF7F50'
+  };
+  return colorMap[colorName] || '#9CA3AF';
+};
+
 export const Inventory = () => {
   // Data State
   const [items, setItems] = useState<Item[]>([]);
@@ -309,7 +353,10 @@ export const Inventory = () => {
                       <p className="text-[10px] font-medium text-stone-400 mt-0.5">{item.category}</p>
                       {item.color && (
                         <div className="flex items-center gap-1.5 mt-1">
-                          <div className="w-3 h-3 rounded-full border-2 border-stone-200" style={{ backgroundColor: item.color.toLowerCase() }}></div>
+                          <div
+                            className="w-3 h-3 rounded-full border-2 border-stone-200"
+                            style={{ background: getColorHex(item.color) }}
+                          ></div>
                           <span className="text-[9px] font-bold text-stone-500 uppercase tracking-wide">{item.color}</span>
                         </div>
                       )}
@@ -445,21 +492,51 @@ export const Inventory = () => {
                           <option value="">Select Color (Optional)...</option>
                           <option value="Red">Red</option>
                           <option value="Blue">Blue</option>
+                          <option value="Sea-Blue">Sea-Blue</option>
+                          <option value="Navy-Blue">Navy-Blue</option>
+                          <option value="Royal-Blue">Royal-Blue</option>
+                          <option value="Silver">Silver</option>
+                          <option value="Rose-Gold">Rose-Gold</option>
                           <option value="Green">Green</option>
+                          <option value="Emerald-Green">Emerald-Green</option>
+                          <option value="Leaf-Green">Leaf-Green</option>
+                          <option value="Mint-Green">Mint-Green</option>
+                          <option value="Lemon-Green">Lemon-Green</option>
+                          <option value="Olive-Green">Olive-Green</option>
                           <option value="Yellow">Yellow</option>
                           <option value="Orange">Orange</option>
+                          <option value="Burnt-Orange">Burnt-Orange</option>
                           <option value="Purple">Purple</option>
+                          <option value="Lilac">Lilac</option>
                           <option value="Pink">Pink</option>
+                          <option value="Hot-Pink">Hot-Pink</option>
+                          <option value="Yogurt">Yogurt</option>
                           <option value="Brown">Brown</option>
+                          <option value="Coffee">Coffee</option>
+                          <option value="Tan">Tan</option>
+                          <option value="Light-Brown">Light-Brown</option>
+                          <option value="Off-White">Off-White</option>
                           <option value="Black">Black</option>
                           <option value="White">White</option>
                           <option value="Gray">Gray</option>
                           <option value="Gold">Gold</option>
-                          <option value="Silver">Silver</option>
                           <option value="Beige">Beige</option>
                           <option value="Cream">Cream</option>
                           <option value="Multi-Color">Multi-Color</option>
+                          <option value="Wine">Wine</option>
+                          <option value="Burgundy">Burgundy</option>
+                          <option value="Peach">Peach</option>
+                          <option value="Coral">Coral</option>
                         </select>
+                        {formData.color && (
+                          <div className="mt-3 flex items-center gap-3 p-3 bg-white border border-stone-200 rounded-xl">
+                            <div
+                              className="w-8 h-8 rounded-lg border-2 border-stone-300 shadow-sm"
+                              style={{ backgroundColor: getColorHex(formData.color) }}
+                            ></div>
+                            <span className="text-sm font-bold text-stone-700">{formData.color}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
