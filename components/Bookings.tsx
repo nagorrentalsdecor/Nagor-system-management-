@@ -902,6 +902,14 @@ export const Bookings = () => {
                             />
                           </div>
                         </div>
+
+                        {/* Balance Due Display */}
+                        <div className="pt-4 border-t border-white/5 flex justify-between items-center animate-in fade-in slide-in-from-bottom-2">
+                          <span className="text-xs font-bold text-white/60 uppercase tracking-widest">Balance Due</span>
+                          <span className={`text-xl font-bold tracking-tighter ${(newBooking.selectedItems.reduce((a, c) => a + (c.item.price * c.qty * (Math.ceil((new Date(newBooking.endDate).getTime() - new Date(newBooking.startDate).getTime()) / (1000 * 60 * 60 * 24)) || 1)), 0) - (parseFloat(newBooking.paidAmount) || 0)) > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                            ₵{(newBooking.selectedItems.reduce((a, c) => a + (c.item.price * c.qty * (Math.ceil((new Date(newBooking.endDate).getTime() - new Date(newBooking.startDate).getTime()) / (1000 * 60 * 60 * 24)) || 1)), 0) - (parseFloat(newBooking.paidAmount) || 0)).toLocaleString()}
+                          </span>
+                        </div>
                       </>
                     )}
                   </div>

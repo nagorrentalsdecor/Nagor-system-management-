@@ -209,6 +209,7 @@ const transformItemFromDB = (i: any): Item => ({
   id: i.id,
   name: i.name || 'Unknown Item',
   category: i.category || 'Uncategorized',
+  color: i.color,
   totalQuantity: i.total_quantity || 0,
   quantityInMaintenance: i.quantity_in_maintenance || 0,
   price: i.price || 0,
@@ -351,7 +352,7 @@ export const saveItems = async (items: Item[]) => {
 
       // Handling this properly: 
       const payload: any = {
-        name: i.name, category: i.category,
+        name: i.name, category: i.category, color: i.color,
         total_quantity: i.totalQuantity, quantity_in_maintenance: i.quantityInMaintenance,
         price: i.price, status: i.status, image_url: i.imageUrl
       };
@@ -677,11 +678,11 @@ export const getDashboardMetrics = (currentUser?: { role: UserRole, name: string
   }
 
   const totalItems = items.reduce((acc, i) => acc + i.totalQuantity, 0);
-  const now = new Date().getTime();
+
+  // Count all reserved/rented items from PENDING, ACTIVE, and OVERDUE bookings
+  // This shows immediate reservation impact regardless of booking start date
   const activeBookings = bookings.filter(b => {
-    const start = new Date(b.startDate).getTime();
-    const end = new Date(b.endDate).getTime();
-    return (b.status === BookingStatus.ACTIVE || b.status === BookingStatus.OVERDUE || (b.status === BookingStatus.PENDING && start <= now && end >= now));
+    return (b.status === BookingStatus.PENDING || b.status === BookingStatus.ACTIVE || b.status === BookingStatus.OVERDUE);
   });
 
   const rentedItems = activeBookings.reduce((acc, b) => {

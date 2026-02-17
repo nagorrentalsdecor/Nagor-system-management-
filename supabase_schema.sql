@@ -37,6 +37,7 @@ create table
     id uuid not null default gen_random_uuid (),
     name text not null,
     category text null,
+    color text null,
     total_quantity integer not null default 0,
     quantity_in_maintenance integer null default 0,
     price numeric not null default 0,

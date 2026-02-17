@@ -57,7 +57,7 @@ import {
 } from '../services/db';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Cell, PieChart, Pie, Legend } from 'recharts';
 import { format, subDays, eachDayOfInterval } from 'date-fns';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../App';
 import { toastService } from '../services/toast';
 
@@ -75,6 +75,7 @@ export const Finance = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const location = useLocation();
+  const navigate = useNavigate();
 
   // UI State
   const [searchTerm, setSearchTerm] = useState('');
@@ -128,6 +129,13 @@ export const Finance = () => {
     status: TransactionStatus.PENDING,
     submittedBy: 'user-1', // This would come from auth context in a real app
   });
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    if (location.pathname === '/finance/new') {
+      navigate('/finance');
+    }
+  };
 
   const refreshData = React.useCallback(async () => {
     try {
@@ -312,7 +320,7 @@ export const Finance = () => {
       submittedBy: currentUser.name,
     });
     refreshData();
-    setIsModalOpen(false);
+    handleCloseModal();
     setTransactionForm({ amount: '', type: TransactionType.INCOME_RENTAL, description: '', date: new Date().toISOString().split('T')[0], propertyId: '', referenceNumber: '', status: TransactionStatus.PENDING, submittedBy: 'user-1' });
     toastService.success("Transaction submitted for approval successfully.");
   };
@@ -774,7 +782,7 @@ export const Finance = () => {
                 <h3 className="text-2xl font-bold text-stone-900 tracking-tight">Manual Entry Protocol</h3>
                 <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mt-1">Capital Management Interface</p>
               </div>
-              <button type="button" onClick={() => setIsModalOpen(false)} className="w-10 h-10 rounded-full border border-stone-200 flex items-center justify-center text-stone-400 hover:text-stone-900 hover:bg-stone-100 transition z-10 flex-shrink-0"><Plus className="rotate-45" size={24} /></button>
+              <button type="button" onClick={handleCloseModal} className="w-10 h-10 rounded-full border border-stone-200 flex items-center justify-center text-stone-400 hover:text-stone-900 hover:bg-stone-100 transition z-10 flex-shrink-0"><Plus className="rotate-45" size={24} /></button>
             </div>
             <form onSubmit={handleTransactionSubmit} className="p-8 space-y-6">
               <div>
@@ -827,7 +835,7 @@ export const Finance = () => {
                 </div>
               )}
               <div className="pt-6 flex gap-4">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 font-bold text-[10px] uppercase tracking-widest text-stone-400 hover:text-stone-900 transition">Abort Entry</button>
+                <button type="button" onClick={handleCloseModal} className="flex-1 py-4 font-bold text-[10px] uppercase tracking-widest text-stone-400 hover:text-stone-900 transition">Abort Entry</button>
                 <button type="submit" className="flex-1 py-4 bg-purple-600 text-white rounded-2xl font-bold text-[10px] uppercase tracking-widest shadow-xl shadow-purple-100 hover:bg-purple-700 transition">Commit Capital</button>
               </div>
             </form>

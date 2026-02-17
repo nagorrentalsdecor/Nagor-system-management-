@@ -51,7 +51,7 @@ export const Inventory = () => {
 
   // Form State
   const [formData, setFormData] = useState<any>({
-    name: '', category: '', totalQuantity: '', price: '', status: ItemStatus.AVAILABLE, imageUrl: ''
+    name: '', category: '', color: '', totalQuantity: '', price: '', status: ItemStatus.AVAILABLE, imageUrl: ''
   });
 
   useEffect(() => {
@@ -73,13 +73,12 @@ export const Inventory = () => {
     const allItems = getItems();
     setItems(allItems);
 
-    // Calculate currently rented counts for EACH item
+    // Calculate reserved/rented counts for EACH item
+    // Include ALL bookings (PENDING, ACTIVE, OVERDUE) to show immediate reservation impact
     const bookings = getBookings();
-    const now = new Date().getTime();
     const activeBookings = bookings.filter(b => {
-      const start = new Date(b.startDate).getTime();
-      const end = new Date(b.endDate).getTime();
-      return (b.status === BookingStatus.ACTIVE || b.status === BookingStatus.OVERDUE || (b.status === BookingStatus.PENDING && start <= now && end >= now));
+      // Count all non-cancelled and non-returned bookings as "occupying" inventory
+      return (b.status === BookingStatus.PENDING || b.status === BookingStatus.ACTIVE || b.status === BookingStatus.OVERDUE);
     });
 
     const counts: Record<string, number> = {};
@@ -155,7 +154,7 @@ export const Inventory = () => {
       setFormData(item);
     } else {
       setEditingItem(null);
-      setFormData({ name: '', category: '', totalQuantity: '', price: '', status: ItemStatus.AVAILABLE, imageUrl: '' });
+      setFormData({ name: '', category: '', color: '', totalQuantity: '', price: '', status: ItemStatus.AVAILABLE, imageUrl: '' });
     }
     setIsModalOpen(true);
   };
@@ -308,6 +307,12 @@ export const Inventory = () => {
                     <div>
                       <h4 className="text-sm font-bold text-stone-800 tracking-tight line-clamp-1">{item.name}</h4>
                       <p className="text-[10px] font-medium text-stone-400 mt-0.5">{item.category}</p>
+                      {item.color && (
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <div className="w-3 h-3 rounded-full border-2 border-stone-200" style={{ backgroundColor: item.color.toLowerCase() }}></div>
+                          <span className="text-[9px] font-bold text-stone-500 uppercase tracking-wide">{item.color}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -429,6 +434,31 @@ export const Inventory = () => {
                         >
                           <option value="">Choose Class...</option>
                           {categories.filter(c => c !== 'ALL').map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block mb-2">Item Color</label>
+                        <select
+                          className="w-full px-5 py-3.5 bg-stone-50 border border-stone-200 rounded-2xl focus:ring-4 focus:ring-purple-100 focus:border-purple-500 outline-none font-bold appearance-none"
+                          value={formData.color || ''} onChange={e => setFormData({ ...formData, color: e.target.value })}
+                        >
+                          <option value="">Select Color (Optional)...</option>
+                          <option value="Red">Red</option>
+                          <option value="Blue">Blue</option>
+                          <option value="Green">Green</option>
+                          <option value="Yellow">Yellow</option>
+                          <option value="Orange">Orange</option>
+                          <option value="Purple">Purple</option>
+                          <option value="Pink">Pink</option>
+                          <option value="Brown">Brown</option>
+                          <option value="Black">Black</option>
+                          <option value="White">White</option>
+                          <option value="Gray">Gray</option>
+                          <option value="Gold">Gold</option>
+                          <option value="Silver">Silver</option>
+                          <option value="Beige">Beige</option>
+                          <option value="Cream">Cream</option>
+                          <option value="Multi-Color">Multi-Color</option>
                         </select>
                       </div>
                     </div>

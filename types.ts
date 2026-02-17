@@ -19,6 +19,7 @@ export interface Item {
   id: string;
   name: string;
   category: string;
+  color?: string; // Item color (e.g., "Red", "Blue", "White")
   totalQuantity: number;
   quantityInMaintenance?: number; // New field for partial maintenance
   price: number; // Daily rental price
