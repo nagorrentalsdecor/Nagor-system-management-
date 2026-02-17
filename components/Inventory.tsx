@@ -440,160 +440,169 @@ export const Inventory = () => {
 
       {/* Inventory Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-xl flex items-center justify-center z-50 p-6 animate-in fade-in duration-300">
-          <GlassCard className="w-full max-w-2xl bg-white shadow-[0_30px_100px_rgba(0,0,0,0.2)] overflow-hidden">
-            <div className="px-8 py-6 border-b border-stone-100 flex justify-between items-center bg-stone-50/50">
+        <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-xl flex items-center justify-center z-50 p-4 md:p-6 animate-in fade-in duration-300">
+          <GlassCard className="w-full max-w-2xl bg-white shadow-[0_30px_100px_rgba(0,0,0,0.2)] flex flex-col max-h-[90vh] md:max-h-[85vh]">
+            {/* Fixed Header */}
+            <div className="px-6 md:px-8 py-4 md:py-6 border-b border-stone-100 flex justify-between items-center bg-stone-50/50 flex-shrink-0">
               <div>
-                <h3 className="text-2xl font-bold text-stone-900 tracking-tight">{editingItem ? 'Edit Asset Instance' : 'Register New Asset'}</h3>
+                <h3 className="text-xl md:text-2xl font-bold text-stone-900 tracking-tight">{editingItem ? 'Edit Asset Instance' : 'Register New Asset'}</h3>
                 <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mt-1">Asset Management Protocol</p>
               </div>
-              <button onClick={closeModal} className="w-10 h-10 rounded-full bg-white border border-stone-200 flex items-center justify-center text-stone-400 hover:text-stone-900 transition shadow-sm">
+              <button onClick={closeModal} className="w-10 h-10 rounded-full bg-white border border-stone-200 flex items-center justify-center text-stone-400 hover:text-stone-900 transition shadow-sm flex-shrink-0">
                 <Plus className="rotate-45" size={24} />
               </button>
             </div>
 
-            <form onSubmit={handleSave} className="p-8 space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="md:col-span-2">
-                  <div className="flex gap-8 items-start">
-                    <div className="w-48 shrink-0">
-                      <ImageCapture
-                        label="Asset Photo"
-                        currentImage={formData.imageUrl}
-                        onImageCaptured={(img) => setFormData({ ...formData, imageUrl: img })}
-                        aspectRatio="square"
-                      />
-                    </div>
-                    <div className="flex-1 space-y-6">
-                      <div>
-                        <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block mb-2">Item Designation</label>
-                        <input
-                          required type="text" placeholder="e.g. Royal Banquet Table"
-                          className="w-full px-5 py-3.5 bg-stone-50 border border-stone-200 rounded-2xl focus:ring-4 focus:ring-purple-100 focus:border-purple-500 outline-none transition font-bold"
-                          value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })}
+            {/* Scrollable Form Content */}
+            <form onSubmit={handleSave} className="flex flex-col flex-1 min-h-0">
+              <div className="p-6 md:p-8 space-y-6 md:space-y-8 overflow-y-auto flex-1">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+                  <div className="md:col-span-2">
+                    <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
+                      <div className="w-full md:w-48 shrink-0">
+                        <ImageCapture
+                          label="Asset Photo"
+                          currentImage={formData.imageUrl}
+                          onImageCaptured={(img) => setFormData({ ...formData, imageUrl: img })}
+                          aspectRatio="square"
                         />
                       </div>
-                      <div>
-                        <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block mb-2">Inventory Category</label>
-                        <select
-                          className="w-full px-5 py-3.5 bg-stone-50 border border-stone-200 rounded-2xl focus:ring-4 focus:ring-purple-100 focus:border-purple-500 outline-none font-bold appearance-none"
-                          value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}
-                        >
-                          <option value="">Choose Class...</option>
-                          {categories.filter(c => c !== 'ALL').map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block mb-2">Item Color</label>
-                        <select
-                          className="w-full px-5 py-3.5 bg-stone-50 border border-stone-200 rounded-2xl focus:ring-4 focus:ring-purple-100 focus:border-purple-500 outline-none font-bold appearance-none"
-                          value={formData.color || ''} onChange={e => setFormData({ ...formData, color: e.target.value })}
-                        >
-                          <option value="">Select Color (Optional)...</option>
-                          <option value="Red">Red</option>
-                          <option value="Blue">Blue</option>
-                          <option value="Sea-Blue">Sea-Blue</option>
-                          <option value="Navy-Blue">Navy-Blue</option>
-                          <option value="Royal-Blue">Royal-Blue</option>
-                          <option value="Silver">Silver</option>
-                          <option value="Rose-Gold">Rose-Gold</option>
-                          <option value="Green">Green</option>
-                          <option value="Emerald-Green">Emerald-Green</option>
-                          <option value="Leaf-Green">Leaf-Green</option>
-                          <option value="Mint-Green">Mint-Green</option>
-                          <option value="Lemon-Green">Lemon-Green</option>
-                          <option value="Olive-Green">Olive-Green</option>
-                          <option value="Yellow">Yellow</option>
-                          <option value="Orange">Orange</option>
-                          <option value="Burnt-Orange">Burnt-Orange</option>
-                          <option value="Purple">Purple</option>
-                          <option value="Lilac">Lilac</option>
-                          <option value="Pink">Pink</option>
-                          <option value="Hot-Pink">Hot-Pink</option>
-                          <option value="Yogurt">Yogurt</option>
-                          <option value="Brown">Brown</option>
-                          <option value="Coffee">Coffee</option>
-                          <option value="Tan">Tan</option>
-                          <option value="Light-Brown">Light-Brown</option>
-                          <option value="Off-White">Off-White</option>
-                          <option value="Black">Black</option>
-                          <option value="White">White</option>
-                          <option value="Gray">Gray</option>
-                          <option value="Gold">Gold</option>
-                          <option value="Beige">Beige</option>
-                          <option value="Cream">Cream</option>
-                          <option value="Multi-Color">Multi-Color</option>
-                          <option value="Wine">Wine</option>
-                          <option value="Burgundy">Burgundy</option>
-                          <option value="Peach">Peach</option>
-                          <option value="Coral">Coral</option>
-                        </select>
-                        {formData.color && (
-                          <div className="mt-3 flex items-center gap-3 p-3 bg-white border border-stone-200 rounded-xl">
-                            <div
-                              className="w-8 h-8 rounded-lg border-2 border-stone-300 shadow-sm"
-                              style={{ backgroundColor: getColorHex(formData.color) }}
-                            ></div>
-                            <span className="text-sm font-bold text-stone-700">{formData.color}</span>
-                          </div>
-                        )}
+                      <div className="flex-1 w-full space-y-4 md:space-y-6">
+                        <div>
+                          <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block mb-2">Item Designation</label>
+                          <input
+                            required type="text" placeholder="e.g. Royal Banquet Table"
+                            className="w-full px-5 py-3.5 bg-stone-50 border border-stone-200 rounded-2xl focus:ring-4 focus:ring-purple-100 focus:border-purple-500 outline-none transition font-bold"
+                            value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block mb-2">Inventory Category</label>
+                          <select
+                            className="w-full px-5 py-3.5 bg-stone-50 border border-stone-200 rounded-2xl focus:ring-4 focus:ring-purple-100 focus:border-purple-500 outline-none font-bold appearance-none"
+                            value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}
+                          >
+                            <option value="">Choose Class...</option>
+                            {categories.filter(c => c !== 'ALL').map(c => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block mb-2">Item Color</label>
+                          <select
+                            className="w-full px-5 py-3.5 bg-stone-50 border border-stone-200 rounded-2xl focus:ring-4 focus:ring-purple-100 focus:border-purple-500 outline-none font-bold appearance-none"
+                            value={formData.color || ''} onChange={e => setFormData({ ...formData, color: e.target.value })}
+                          >
+                            <option value="">Select Color (Optional)...</option>
+                            <option value="Red">Red</option>
+                            <option value="Blue">Blue</option>
+                            <option value="Sea-Blue">Sea-Blue</option>
+                            <option value="Navy-Blue">Navy-Blue</option>
+                            <option value="Royal-Blue">Royal-Blue</option>
+                            <option value="Silver">Silver</option>
+                            <option value="Rose-Gold">Rose-Gold</option>
+                            <option value="Green">Green</option>
+                            <option value="Emerald-Green">Emerald-Green</option>
+                            <option value="Leaf-Green">Leaf-Green</option>
+                            <option value="Mint-Green">Mint-Green</option>
+                            <option value="Lemon-Green">Lemon-Green</option>
+                            <option value="Olive-Green">Olive-Green</option>
+                            <option value="Yellow">Yellow</option>
+                            <option value="Orange">Orange</option>
+                            <option value="Burnt-Orange">Burnt-Orange</option>
+                            <option value="Purple">Purple</option>
+                            <option value="Lilac">Lilac</option>
+                            <option value="Pink">Pink</option>
+                            <option value="Hot-Pink">Hot-Pink</option>
+                            <option value="Yogurt">Yogurt</option>
+                            <option value="Brown">Brown</option>
+                            <option value="Coffee">Coffee</option>
+                            <option value="Tan">Tan</option>
+                            <option value="Light-Brown">Light-Brown</option>
+                            <option value="Off-White">Off-White</option>
+                            <option value="Black">Black</option>
+                            <option value="White">White</option>
+                            <option value="Gray">Gray</option>
+                            <option value="Gold">Gold</option>
+                            <option value="Beige">Beige</option>
+                            <option value="Cream">Cream</option>
+                            <option value="Multi-Color">Multi-Color</option>
+                            <option value="Wine">Wine</option>
+                            <option value="Burgundy">Burgundy</option>
+                            <option value="Peach">Peach</option>
+                            <option value="Coral">Coral</option>
+                          </select>
+                          {formData.color && (
+                            <div className="mt-3 flex items-center gap-3 p-3 bg-white border border-stone-200 rounded-xl">
+                              <div
+                                className="w-8 h-8 rounded-lg border-2 border-stone-300 shadow-sm"
+                                style={{ backgroundColor: getColorHex(formData.color) }}
+                              ></div>
+                              <span className="text-sm font-bold text-stone-700">{formData.color}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                <div>
-                  <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block mb-2">Service Status</label>
-                  <select
-                    className="w-full px-5 py-3.5 bg-stone-50 border border-stone-200 rounded-2xl focus:ring-4 focus:ring-purple-100 focus:border-purple-500 outline-none font-bold"
-                    value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as ItemStatus })}
-                  >
-                    {Object.values(ItemStatus).map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block mb-2">Service Status</label>
+                    <select
+                      className="w-full px-5 py-3.5 bg-stone-50 border border-stone-200 rounded-2xl focus:ring-4 focus:ring-purple-100 focus:border-purple-500 outline-none font-bold"
+                      value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as ItemStatus })}
+                    >
+                      {Object.values(ItemStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
 
-                <div>
-                  <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block mb-2">Total Unit Count</label>
-                  <input
-                    required type="number" min="0"
-                    className="w-full px-5 py-3.5 bg-stone-50 border border-stone-200 rounded-2xl focus:ring-4 focus:ring-purple-100 focus:border-purple-500 outline-none font-bold"
-                    value={formData.totalQuantity} onChange={e => setFormData({ ...formData, totalQuantity: parseInt(e.target.value) || 0 })}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block mb-2 text-purple-400">Maintenance Queue</label>
-                  <div className="relative">
-                    <AlertTriangle className="absolute left-4 top-1/2 -translate-y-1/2 text-purple-300" size={16} />
+                  <div>
+                    <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block mb-2">Total Unit Count</label>
                     <input
-                      type="number" min="0" max={formData.totalQuantity}
-                      placeholder="0"
-                      className="w-full pl-10 pr-5 py-3.5 bg-purple-50 border border-purple-100 rounded-2xl focus:ring-4 focus:ring-purple-100 focus:border-purple-300 outline-none font-bold text-purple-600"
-                      value={formData.quantityInMaintenance || ''}
-                      onChange={e => setFormData({ ...formData, quantityInMaintenance: parseInt(e.target.value) || 0 })}
+                      required type="number" min="0"
+                      className="w-full px-5 py-3.5 bg-stone-50 border border-stone-200 rounded-2xl focus:ring-4 focus:ring-purple-100 focus:border-purple-500 outline-none font-bold"
+                      value={formData.totalQuantity} onChange={e => setFormData({ ...formData, totalQuantity: parseInt(e.target.value) || 0 })}
                     />
                   </div>
-                  <p className="text-[9px] font-bold text-purple-400 mt-1.5 ml-1">Units here are removed from availability</p>
-                </div>
 
-                <div>
-                  <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block mb-2">Daily Rate (GH₵)</label>
-                  <input
-                    required type="number" min="0" step="0.01"
-                    className="w-full px-5 py-3.5 bg-stone-50 border border-stone-200 rounded-2xl focus:ring-4 focus:ring-purple-100 focus:border-purple-500 outline-none font-bold text-purple-600"
-                    value={formData.price} onChange={e => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
-                  />
+                  {editingItem && (
+                    <div>
+                      <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block mb-2 text-purple-400">Maintenance Queue</label>
+                      <div className="relative">
+                        <AlertTriangle className="absolute left-4 top-1/2 -translate-y-1/2 text-purple-300" size={16} />
+                        <input
+                          type="number" min="0" max={formData.totalQuantity}
+                          placeholder="0"
+                          className="w-full pl-10 pr-5 py-3.5 bg-purple-50 border border-purple-100 rounded-2xl focus:ring-4 focus:ring-purple-100 focus:border-purple-300 outline-none font-bold text-purple-600"
+                          value={formData.quantityInMaintenance || ''}
+                          onChange={e => setFormData({ ...formData, quantityInMaintenance: parseInt(e.target.value) || 0 })}
+                        />
+                      </div>
+                      <p className="text-[9px] font-bold text-purple-400 mt-1.5 ml-1">Units here are removed from availability</p>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block mb-2">Daily Rate (GH₵)</label>
+                    <input
+                      required type="number" min="0" step="0.01"
+                      className="w-full px-5 py-3.5 bg-stone-50 border border-stone-200 rounded-2xl focus:ring-4 focus:ring-purple-100 focus:border-purple-500 outline-none font-bold text-purple-600"
+                      value={formData.price} onChange={e => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="flex justify-between items-center pt-8 border-t border-stone-100">
-                {editingItem ? (
-                  <button type="button" onClick={() => deleteItem(editingItem.id)} className="text-[10px] font-bold text-purple-900 uppercase tracking-widest hover:bg-purple-50 px-4 py-2 rounded-xl transition">Purge Asset</button>
-                ) : <div />}
+              {/* Fixed Footer with Action Buttons */}
+              <div className="px-6 md:px-8 py-4 md:py-6 border-t border-stone-100 bg-stone-50/30 flex-shrink-0">
+                <div className="flex flex-col-reverse sm:flex-row justify-between items-center gap-4">
+                  {editingItem ? (
+                    <button type="button" onClick={() => deleteItem(editingItem.id)} className="text-[10px] font-bold text-purple-900 uppercase tracking-widest hover:bg-purple-50 px-4 py-2 rounded-xl transition w-full sm:w-auto">Purge Asset</button>
+                  ) : <div className="hidden sm:block" />}
 
-                <div className="flex gap-4">
-                  <button type="button" onClick={closeModal} className="px-8 py-3 text-sm font-bold text-stone-500 hover:text-stone-900 transition">Discard</button>
-                  <button type="submit" className="px-10 py-3 bg-purple-600 text-white rounded-2xl font-bold shadow-xl shadow-purple-200 hover:bg-purple-700 transition active:scale-95">Commit Asset</button>
+                  <div className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto">
+                    <button type="button" onClick={closeModal} className="px-8 py-3 text-sm font-bold text-stone-500 hover:text-stone-900 transition w-full sm:w-auto">Discard</button>
+                    <button type="submit" className="px-10 py-3 bg-purple-600 text-white rounded-2xl font-bold shadow-xl shadow-purple-200 hover:bg-purple-700 transition active:scale-95 w-full sm:w-auto">Commit Asset</button>
+                  </div>
                 </div>
               </div>
             </form>
