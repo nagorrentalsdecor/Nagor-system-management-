@@ -223,7 +223,7 @@ export const Inventory = () => {
   };
 
   // --- UI Components ---
-  const categories = ['ALL', 'CHAIRS', 'TABLES', 'CANOPIES', 'LIGHTING', 'DRAPES', 'DECOR', 'TABLEWARE', 'CATERING', 'ELECTRONICS', 'FLOORING', 'OTHERS'];
+  const categories = ['ALL', 'CHAIRS', 'TABLES', 'CANOPIES', 'LIGHTING', 'DRAPES', 'DECOR', 'FLOWERS', 'TABLEWARE', 'CATERING', 'ELECTRONICS', 'FLOORING', 'OTHERS'];
 
   const filteredItems = items.filter(i => {
     const matchesSearch = i.name.toLowerCase().includes(searchTerm.toLowerCase()) || i.category.toLowerCase().includes(searchTerm.toLowerCase());
