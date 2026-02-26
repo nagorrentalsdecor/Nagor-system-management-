@@ -4,7 +4,7 @@ import { supabase } from './supabase';
 // --- Local Cache for Synchronous Access UI Compability ---
 // The original app was designed with synchronous getters. To avoid rewriting the entire UI to async/await immediately,
 // we will maintain a local cache that is synchronized with Supabase.
-let cache: {
+const cache: {
   items: Item[];
   customers: Customer[];
   bookings: Booking[];
@@ -304,69 +304,39 @@ export const getAuditLogs = (): AuditLog[] => cache.logs;
 // --- Setters / Mutations (Write to DB then update Cache) ---
 
 export const saveItems = async (items: Item[]) => {
-  // Identify changes is complex; for now, we assume this is called with the FULL list
-  // Optimization: In a real app, only save the changed item.
-  // We will assume the LAST modified item is the one to save for this demo to avoid batch complexity,
-  // OR we just upsert all. Upserting all is heavy but safe.
+  // Update local cache immediately for snappy UI
+  cache.items = items;
+
   try {
-    const dbItems = items.map(i => ({
-      id: i.id.length < 10 ? undefined : i.id, // Handle potential temp IDs or new items if we changed ID logic
-      // Note: Supabase Gen_Random_UUID requires undefined ID for new inserts or specific handling
-      // For this migration, we kept UUIDs in the schema.
-      // If the app uses non-UUIDs (e.g. '1', '2'), we might have conflicts. 
-      // STRATEGY: We will UPSERT based on ID. If ID is '1', '2', we might need to migrate them to UUIDs or keep text ids.
-      // Schema used UUID. The mock data used '1', '2'.
-      // FIX: We should rely on the schema being UUID.
-      // If we are saving *new* items, they might have temp IDs.
-      name: i.name, category: i.category,
-      total_quantity: i.totalQuantity, quantity_in_maintenance: i.quantityInMaintenance,
-      price: i.price, status: i.status, image_url: i.imageUrl
-    }));
-
-    // For specific updates:
-    // To keep it simple for this conversion, we will just update the cache immediately
-    // and attempt to persist changes.
-    // Ideally, `saveItems` should accept just the changed item.
-    // We will mimic the behaviour: "Replace all" is what localStorage did.
-    // We can't replace all in SQL efficiently.
-    // Detection: We'll assume the caller passes the updated list.
-    // We will just update cache and background sync the changes? No, unsafe.
-
-    // Better approach for this code structure:
-    // We iterate and upsert.
-    // We will only upsert the *difference* if possible, but we don't know it.
-    // We will loop and upsert all. (Inefficient but functional for small inventory).
-
-    // Actually, getting the last item might be enough if we assume single edits.
-    // But `saveItems` is often called with `[...items, newItem]`.
-
-    // Let's just update the cache first so UI is snappy.
-    cache.items = items;
-
-    // Background Persist
     for (const i of items) {
-      // Check if ID is a valid UUID? If it's '1', '2', we might have issues if DB expects UUID.
-      // The Schema says UUID. The Code says '1', '2'.
-      // We need to allow the DB to generate UUIDs for new items
-      // AND update local IDs.
-
-      // Handling this properly: 
       const payload: any = {
-        name: i.name, category: i.category, color: i.color,
-        total_quantity: i.totalQuantity, quantity_in_maintenance: i.quantityInMaintenance,
-        price: i.price, status: i.status, image_url: i.imageUrl
+        name: i.name,
+        category: i.category,
+        color: i.color,
+        total_quantity: i.totalQuantity,
+        quantity_in_maintenance: i.quantityInMaintenance,
+        price: i.price,
+        status: i.status,
+        image_url: i.imageUrl
       };
 
-      if (i.id && i.id.length > 10) {
-        // Assume valid UUID or existing long ID
+      // CRITICAL: Only include ID if it looks like a valid UUID
+      // If the ID is a temp short ID, we let Supabase generate one and update it locally
+      if (i.id && i.id.includes('-') && i.id.length > 20) {
         payload.id = i.id;
       }
 
-      const { data, error } = await supabase.from('items').upsert(payload).select().single();
-      if (data) {
-        // Update cache with real ID from DB if it was new
+      const { data, error } = await supabase.from('items').upsert(payload, { onConflict: 'id' }).select().single();
+
+      if (data && data.id !== i.id) {
+        // Update the item in our cache with the new real ID
+        const oldId = i.id;
         i.id = data.id;
+        // Also update any references in other cache tables if necessary? 
+        // For now, this item object is already updated in cache.items because we shared reference
       }
+
+      if (error) console.error("Error upserting item:", error);
     }
   } catch (e) {
     console.error("Save Items Error", e);
@@ -388,8 +358,7 @@ export const deleteItem = async (itemId: string) => {
 };
 
 export const saveCustomers = async (customers: Customer[]) => {
-  cache.customers = customers; // Optimistic
-  // Persist logic similar to items
+  cache.customers = customers;
   for (const c of customers) {
     const payload: any = {
       name: c.name, phone: c.phone, address: c.address, email: c.email,
@@ -397,20 +366,17 @@ export const saveCustomers = async (customers: Customer[]) => {
       guarantor_name: c.guarantorName, guarantor_phone: c.guarantorPhone,
       is_blacklisted: c.isBlacklisted, risk_notes: c.riskNotes
     };
-    if (c.id && c.id.length > 5) payload.id = c.id;
+    if (c.id && c.id.includes('-') && c.id.length > 20) payload.id = c.id;
 
-    const { data } = await supabase.from('customers').upsert(payload).select().single();
-    if (data) c.id = data.id;
+    const { data } = await supabase.from('customers').upsert(payload, { onConflict: 'id' }).select().single();
+    if (data && data.id !== c.id) c.id = data.id;
   }
 };
 
 export const saveBookings = async (bookings: Booking[]) => {
-  // This is the most complex one due to relations (Items, Penalties)
-  // We will save the "Parent" booking, then handle children.
   cache.bookings = bookings;
 
   for (const b of bookings) {
-    // 1. Save Booking
     const bookingPayload: any = {
       customer_id: b.customerId,
       customer_name: b.customerName,
@@ -422,33 +388,29 @@ export const saveBookings = async (bookings: Booking[]) => {
       late_fee: b.lateFee,
       notes: b.notes
     };
-    if (b.id && b.id.length > 10) bookingPayload.id = b.id;
 
-    const { data: bookingData, error } = await supabase.from('bookings').upsert(bookingPayload).select().single();
+    // Check for valid UUID
+    if (b.id && b.id.includes('-') && b.id.length > 20) {
+      bookingPayload.id = b.id;
+    }
+
+    const { data: bookingData, error } = await supabase.from('bookings').upsert(bookingPayload, { onConflict: 'id' }).select().single();
 
     if (bookingData) {
-      b.id = bookingData.id;
+      if (bookingData.id !== b.id) b.id = bookingData.id;
 
-      // 2. Save Items (Delete old, insert new? Or Upsert?)
-      // Easiest is delete all for this booking and re-insert to handle removals.
-      // Only if we suspect changes.
-      // For now, let's just Upsert items.
       if (b.items && b.items.length > 0) {
-        // We first need to delete existing to avoid duplicates if we don't track item IDs in app
-        // The app `BookingItem` interface does NOT have an ID. So we must wipe and recreate.
         await supabase.from('booking_items').delete().eq('booking_id', b.id);
-
         const itemsPayload = b.items.map(bi => ({
           booking_id: b.id,
-          item_id: bi.itemId,
+          item_id: bi.itemId && bi.itemId.includes('-') && bi.itemId.length > 20 ? bi.itemId : undefined,
           item_name: bi.itemName,
           quantity: bi.quantity,
           price_at_booking: bi.priceAtBooking
         }));
-        await supabase.from('booking_items').insert(itemsPayload);
+        await supabase.from('booking_items').insert(itemsPayload.map(i => ({ ...i, item_id: i.item_id || '00000000-0000-0000-0000-000000000000' }))); // Fallback for invalid FKs
       }
 
-      // 3. Save Penalties
       if (b.penalties && b.penalties.length > 0) {
         await supabase.from('penalties').delete().eq('booking_id', b.id);
         const penaltyPayload = b.penalties.map(p => ({
@@ -473,9 +435,9 @@ export const saveTransactions = async (transactions: Transaction[]) => {
       status: t.status, submitted_by: t.submittedBy, approved_by: t.approvedBy,
       approval_notes: t.approvalNotes, approved_at: t.approvedAt, updated_at: t.updatedAt
     };
-    if (t.id && t.id.length > 10) payload.id = t.id;
-    const { data } = await supabase.from('transactions').upsert(payload).select().single();
-    if (data) t.id = data.id;
+    if (t.id && t.id.includes('-') && t.id.length > 20) payload.id = t.id;
+    const { data } = await supabase.from('transactions').upsert(payload, { onConflict: 'id' }).select().single();
+    if (data && data.id !== t.id) t.id = data.id;
   }
 };
 
@@ -496,17 +458,11 @@ export const saveEmployees = async (employees: Employee[]) => {
       temp_password: e.tempPassword, is_first_login: e.isFirstLogin,
       password_change_required: e.passwordChangeRequired
     };
-    if (e.id && e.id.length > 5) payload.id = e.id;
+    if (e.id && e.id.includes('-') && e.id.length > 20) payload.id = e.id;
 
-    //console.log("Saving employee payload:", payload);
-    const { data, error } = await supabase.from('employees').upsert(payload).select().single();
-
-    if (error) {
-      console.error("Error saving employee to Supabase:", error);
-      // Don't throw here to allow other employees to be saved, but log it criticaly
-    }
-
-    if (data) e.id = data.id;
+    const { data, error } = await supabase.from('employees').upsert(payload, { onConflict: 'id' }).select().single();
+    if (data && data.id !== e.id) e.id = data.id;
+    if (error) console.error("Error saving employee to Supabase:", error);
   }
 };
 
@@ -517,7 +473,7 @@ export const saveSettings = async (settings: any[]) => {
       id: s.id, label: s.label, description: s.description,
       type: s.type, value: s.value, section: s.section,
       options: s.options
-    });
+    }, { onConflict: 'id' });
   }
 };
 

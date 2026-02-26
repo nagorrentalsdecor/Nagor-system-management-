@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Item, ItemStatus, BookingStatus } from '../types';
-import { getItems, saveItems, getBookings, createAuditLog, deleteItem as deleteItemFromDb } from '../services/db';
+import { getItems, saveItems, getBookings, createAuditLog, deleteItem as deleteItemFromDb, generateUUID } from '../services/db';
 import { toastService } from '../services/toast';
 import { ImageCapture } from './ImageCapture';
 
@@ -168,7 +168,7 @@ export const Inventory = () => {
     } else {
       updatedItems.push({
         ...finalData,
-        id: Math.random().toString(36).substr(2, 9),
+        id: generateUUID(),
       } as Item);
       createAuditLog('CREATE_ASSET', `Added new asset to inventory: ${finalData.name}. Qty: ${finalData.totalQuantity}`);
     }
@@ -223,7 +223,7 @@ export const Inventory = () => {
   };
 
   // --- UI Components ---
-  const categories = ['ALL', 'CHAIRS', 'TABLES', 'CANOPIES', 'LIGHTING', 'DRAPES', 'DECOR', 'FLOWERS', 'TABLEWARE', 'CATERING', 'ELECTRONICS', 'FLOORING', 'OTHERS'];
+  const categories = ['ALL', 'CHAIRS', 'TABLES', 'CANOPIES', 'LIGHTING', 'DRAPES', 'DECOR', 'BACKDROPS', 'FLOWERS', 'TABLEWARE', 'CATERING', 'ELECTRONICS', 'FLOORING', 'OTHERS'];
 
   const filteredItems = items.filter(i => {
     const matchesSearch = i.name.toLowerCase().includes(searchTerm.toLowerCase()) || i.category.toLowerCase().includes(searchTerm.toLowerCase());

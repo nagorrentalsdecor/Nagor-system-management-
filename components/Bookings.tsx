@@ -7,7 +7,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../App';
 import { Booking, BookingStatus, Customer, Item, ItemStatus, Transaction, TransactionType, UserRole, TransactionStatus } from '../types';
-import { getBookings, saveBookings, getCustomers, getItems, getTransactions, createTransaction, saveItems, checkAvailability, isBookingOverdue, calculateLateFee, createAuditLog } from '../services/db';
+import { getBookings, saveBookings, getCustomers, getItems, getTransactions, createTransaction, saveItems, checkAvailability, isBookingOverdue, calculateLateFee, createAuditLog, generateUUID } from '../services/db';
 import { toastService } from '../services/toast';
 
 const GlassCard = ({ children, className = "" }: any) => (
@@ -160,7 +160,7 @@ export const Bookings = () => {
     }
 
     const booking: Booking = {
-      id: Math.random().toString(36).substr(2, 9).toUpperCase(),
+      id: generateUUID(),
       customerId: newBooking.customerId, customerName: customer?.name || 'Unknown',
       items: newBooking.selectedItems.map(i => ({ itemId: i.item.id, itemName: i.item.name, quantity: i.qty, priceAtBooking: i.item.price })),
       startDate: newBooking.startDate, endDate: newBooking.endDate, status: BookingStatus.PENDING,
