@@ -65,16 +65,20 @@ export default function App() {
   useEffect(() => {
     // Initialize mock DB & Supabase Cache
     const init = async () => {
-      // Rescue timeout: If it takes more than 8 seconds, force the app to show the login
+      // Rescue timeout: If it takes more than 5 seconds, force the app to show the login
       const rescueTimer = setTimeout(() => {
-        if (loading) {
-          console.warn("Initialization taking too long, forcing load completion.");
-          setLoading(false);
-        }
-      }, 8000);
+        setLoading(false);
+      }, 5000);
 
       try {
-        await initializeData();
+        // Start initialization
+        const initPromise = initializeData();
+        
+        // Immediate check: If we have cached data, we can potentially show the UI faster
+        // But we wait at least 1 second for a smooth splash transition
+        await new Promise(resolve => setTimeout(resolve, 1200));
+
+        await initPromise;
 
         // Check for existing session
         const employeeData = sessionStorage.getItem('currentEmployee');

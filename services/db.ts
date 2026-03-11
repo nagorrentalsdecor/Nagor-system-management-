@@ -2,8 +2,8 @@ import { Item, Booking, Customer, Transaction, ItemStatus, BookingStatus, Transa
 import { supabase } from './supabase';
 
 // --- Local Cache for Synchronous Access UI Compability ---
-// The original app was designed with synchronous getters. To avoid rewriting the entire UI to async/await immediately,
-// we will maintain a local cache that is synchronized with Supabase.
+const CACHE_KEY = 'nagor_system_cache_v1';
+
 const cache: {
   items: Item[];
   customers: Customer[];
@@ -24,6 +24,29 @@ const cache: {
   logs: []
 };
 
+// --- Cache Persistence ---
+const saveToLocalStorage = () => {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+  } catch (e) {
+    console.warn("Cache persistence failed:", e);
+  }
+};
+
+const loadFromLocalStorage = () => {
+  try {
+    const saved = localStorage.getItem(CACHE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      Object.assign(cache, parsed);
+      return true;
+    }
+  } catch (e) {
+    console.warn("Cache restoration failed:", e);
+  }
+  return false;
+};
+
 // Flags to track if data is initialized
 let isInitialized = false;
 
@@ -31,46 +54,56 @@ let isInitialized = false;
 
 export const initializeData = async () => {
   if (isInitialized) return;
-  console.log("Initializing Supabase Data Sync...");
+  
+  // 1. FAST PATH: Restore from LocalStorage immediately
+  const hasLocal = loadFromLocalStorage();
+  if (hasLocal) {
+    console.log("System Restored from Local Cache (Instant mode)");
+    // Don't mark isInitialized yet, so background sync can start
+  }
 
   try {
     const fetchTableSync = async (table: string, query: any, transform: (d: any) => any, cacheField: keyof typeof cache) => {
-      console.log(`Syncing ${table}...`);
       const { data, error } = await query;
-      if (error) {
-        console.error(`Error syncing ${table}:`, error);
-      } else if (data) {
+      if (!error && data) {
         if (Array.isArray(data)) {
           (cache as any)[cacheField] = data.map(transform);
         } else {
           (cache as any)[cacheField] = transform(data);
         }
-        // Dispatch event immediately after each table loads
         window.dispatchEvent(new CustomEvent('db-sync', { detail: { table } }));
+        saveToLocalStorage();
       }
     };
 
-    // Sequential but immediate updates for critical tables first
-    await fetchTableSync('items', supabase.from('items').select('*'), transformItemFromDB, 'items');
-    await fetchTableSync('customers', supabase.from('customers').select('*'), transformCustomerFromDB, 'customers');
-    
-    // Non-blocking for less critical tables
-    const nonCritical = [
-      fetchTableSync('employees', supabase.from('employees').select('*'), transformEmployeeFromDB, 'employees'),
-      fetchTableSync('settings', supabase.from('settings').select('*'), (d) => d, 'settings'),
-      fetchTableSync('payroll_runs', supabase.from('payroll_runs').select('*'), (p) => {
-        try {
-          const itemsField = typeof p.items === 'string' ? JSON.parse(p.items) : (p.items || []);
-          return { ...p, items: itemsField };
-        } catch (e) { return p; }
-      }, 'payrollRuns'),
-      fetchTableSync('audit_logs', supabase.from('audit_logs').select('*').order('timestamp', { ascending: false }).limit(100), transformLogFromDB, 'logs')
-    ];
+    // Parallelize CRITICAL tables for first view
+    console.log("Synchronizing Primary Data Streams...");
+    await Promise.all([
+      fetchTableSync('items', supabase.from('items').select('*'), transformItemFromDB, 'items'),
+      fetchTableSync('customers', supabase.from('customers').select('*'), transformCustomerFromDB, 'customers'),
+      fetchTableSync('employees', supabase.from('employees').select('*'), transformEmployeeFromDB, 'employees')
+    ]);
 
-    // Bookings has complex transform, handle separately
-    supabase.from('bookings').select(`*, items:booking_items(*), penalties(*)`).then(({ data, error }) => {
-      if (data) {
-        cache.bookings = data.map((b: any) => {
+    // Now that critical data is here (or at least attempted), we can let the UI go.
+    isInitialized = true;
+
+    // Background everything else
+    const syncBackground = async () => {
+      await Promise.all([
+        fetchTableSync('settings', supabase.from('settings').select('*'), (d) => d, 'settings'),
+        fetchTableSync('payroll_runs', supabase.from('payroll_runs').select('*'), (p) => {
+          try {
+            const itemsField = typeof p.items === 'string' ? JSON.parse(p.items) : (p.items || []);
+            return { ...p, items: itemsField };
+          } catch (e) { return p; }
+        }, 'payrollRuns'),
+        fetchTableSync('audit_logs', supabase.from('audit_logs').select('*').order('timestamp', { ascending: false }).limit(50), transformLogFromDB, 'logs')
+      ]);
+
+      // Handle relational tables
+      const bookingsR = await supabase.from('bookings').select(`*, items:booking_items(*), penalties(*)`);
+      if (bookingsR.data) {
+        cache.bookings = bookingsR.data.map((b: any) => {
           try {
             return {
               id: b.id, customerId: b.customer_id, customerName: b.customer_name || 'Anonymous Partner',
@@ -88,24 +121,21 @@ export const initializeData = async () => {
         }).filter(b => b !== null);
         window.dispatchEvent(new CustomEvent('db-sync', { detail: { table: 'bookings' } }));
       }
-    });
 
-    // Transactions
-    supabase.from('transactions').select('*').then(({ data }) => {
-      if (data) {
-        cache.transactions = data.map(transformTransactionFromDB);
+      const transR = await supabase.from('transactions').select('*');
+      if (transR.data) {
+        cache.transactions = transR.data.map(transformTransactionFromDB);
         window.dispatchEvent(new CustomEvent('db-sync', { detail: { table: 'transactions' } }));
       }
-    });
+      
+      saveToLocalStorage();
+      setupRealtimeListeners();
+    };
 
-    await Promise.all(nonCritical);
+    syncBackground(); // Non-blocking
     
-    isInitialized = true;
-    console.log("Supabase Data Synchronization Stream Finalized");
-    setupRealtimeListeners();
   } catch (error) {
-    console.error("Critical: Failed to load data from Supabase", error);
-    // Fallback?
+    console.error("Critical Sync Error:", error);
   }
 };
 
