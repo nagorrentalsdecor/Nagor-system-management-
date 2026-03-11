@@ -102,12 +102,46 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-stone-100 space-y-4">
-        <div className="bg-white/50 backdrop-blur-xl p-8 rounded-full shadow-2xl mb-4 animate-pulse">
-          <img src="/logo-placeholder.png" className="w-16 h-16 opacity-50" alt="" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8f7f4] relative overflow-hidden">
+        {/* Animated Background Elements */}
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-100 rounded-full blur-[120px] opacity-50 animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-stone-200 rounded-full blur-[120px] opacity-50 animate-pulse" style={{ animationDelay: '1s' }} />
+
+        <div className="relative z-10 flex flex-col items-center space-y-8">
+          <div className="relative group">
+            <div className="absolute inset-0 bg-purple-500 rounded-[2.5rem] blur-2xl opacity-20 group-hover:opacity-40 transition-opacity duration-700 animate-pulse" />
+            <div className="bg-white/80 backdrop-blur-2xl p-10 rounded-[3rem] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-white/50 relative overflow-hidden">
+              <img 
+                src="/images/logo.png" 
+                className="w-24 h-24 object-contain relative z-10 grayscale hover:grayscale-0 transition-all duration-700" 
+                alt="Nagor Logo" 
+                onError={(e) => {
+                  // Fallback if logo is missing
+                  e.currentTarget.src = 'https://ui-avatars.com/api/?name=Nagor&background=a855f7&color=fff&size=200';
+                }}
+              />
+              <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-30" />
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
+              <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
+              <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce" />
+            </div>
+            
+            <div className="text-center">
+              <h2 className="text-[10px] font-black text-stone-400 uppercase tracking-[0.4em] mb-1">Nexus Security Protocol</h2>
+              <p className="text-base font-bold text-stone-800 tracking-tight">Synchronizing System Data...</p>
+            </div>
+          </div>
         </div>
-        <Loader2 className="w-12 h-12 text-purple-600 animate-spin" />
-        <h2 className="text-xl font-bold text-stone-500 tracking-widest uppercase animate-pulse">Initializing System...</h2>
+
+        {/* Footer Build Tag */}
+        <div className="absolute bottom-8 text-[10px] font-bold text-stone-300 uppercase tracking-widest border border-stone-100 px-4 py-1.5 rounded-full backdrop-blur-sm">
+          Build v1.0.1 • Production Stable
+        </div>
       </div>
     );
   }

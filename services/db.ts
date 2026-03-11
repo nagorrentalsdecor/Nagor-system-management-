@@ -45,45 +45,65 @@ export const initializeData = async () => {
       supabase.from('payroll_runs').select('*')
     ]);
 
+    // Map data for each table safely
     if (items.data) cache.items = items.data.map(transformItemFromDB);
     if (customers.data) cache.customers = customers.data.map(transformCustomerFromDB);
     if (employees.data) cache.employees = employees.data.map(transformEmployeeFromDB);
     if (transactions.data) cache.transactions = transactions.data.map(transformTransactionFromDB);
     if (settings.data) cache.settings = settings.data;
     if (logs.data) cache.logs = logs.data.map(transformLogFromDB);
-    if (payrolls.data) cache.payrollRuns = payrolls.data.map(p => ({ ...p, items: typeof p.items === 'string' ? JSON.parse(p.items) : p.items }));
 
-    // Complex transform for Bookings to match previous structure
+    // Safe JSON parsing for payrolls
+    if (payrolls.data) {
+      cache.payrollRuns = payrolls.data.map(p => {
+        let itemsField = [];
+        try {
+          itemsField = typeof p.items === 'string' ? JSON.parse(p.items) : (p.items || []);
+        } catch (e) {
+          console.warn("Malformed payroll items safely ignored", p.id);
+        }
+        return { ...p, items: itemsField };
+      });
+    }
+
+    // Complex transform for Bookings with safety checks
     if (bookings.data) {
-      cache.bookings = bookings.data.map((b: any) => ({
-        id: b.id,
-        customerId: b.customer_id,
-        customerName: b.customer_name,
-        startDate: b.start_date,
-        endDate: b.end_date,
-        status: b.status as BookingStatus,
-        totalAmount: b.total_amount,
-        paidAmount: b.paid_amount,
-        lateFee: b.late_fee,
-        notes: b.notes,
-        createdAt: b.created_at,
-        items: b.items ? b.items.map((bi: any) => ({
-          itemId: bi.item_id,
-          itemName: bi.item_name,
-          quantity: bi.quantity,
-          priceAtBooking: bi.price_at_booking
-        })) : [],
-        penalties: b.penalties ? b.penalties.map((p: any) => ({
-          type: p.type,
-          amount: p.amount,
-          description: p.description,
-          date: p.date
-        })) : []
-      }));
+      cache.bookings = bookings.data.map((b: any) => {
+        try {
+          return {
+            id: b.id,
+            customerId: b.customer_id,
+            customerName: b.customer_name || 'Anonymous Partner',
+            startDate: b.start_date,
+            endDate: b.end_date,
+            status: b.status as BookingStatus,
+            totalAmount: b.total_amount || 0,
+            paidAmount: b.paid_amount || 0,
+            lateFee: b.late_fee || 0,
+            notes: b.notes || '',
+            createdAt: b.created_at,
+            items: Array.isArray(b.items) ? b.items.map((bi: any) => ({
+              itemId: bi.item_id,
+              itemName: bi.item_name || 'Unknown Asset',
+              quantity: bi.quantity || 0,
+              priceAtBooking: bi.price_at_booking || 0
+            })) : [],
+            penalties: Array.isArray(b.penalties) ? b.penalties.map((p: any) => ({
+              type: p.type,
+              amount: p.amount || 0,
+              description: p.description || '',
+              date: p.date
+            })) : []
+          };
+        } catch (err) {
+          console.error("Critical error transforming booking:", b.id, err);
+          return null;
+        }
+      }).filter((b: any) => b !== null);
     }
 
     isInitialized = true;
-    console.log("Supabase Data Loaded Successfully");
+    console.log("Supabase Data Synchronization Finalized");
     setupRealtimeListeners();
   } catch (error) {
     console.error("Critical: Failed to load data from Supabase", error);
