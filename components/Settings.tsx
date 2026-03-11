@@ -388,7 +388,7 @@ export const Settings = () => {
     if (window.confirm('DANGER: This will delete ALL data including bookings, customers, and inventory. This action cannot be undone. Are you sure?')) {
       if (window.confirm('Are you REALLY sure? Last chance!')) {
         clearDatabase();
-        seedDatabase();
+        // seedDatabase(); // Removed to prevent mock data from returning after reset
         createAuditLog('RESET_SYSTEM', 'Performed factory reset');
         alert('System reset complete. Reloading...');
         window.location.reload();

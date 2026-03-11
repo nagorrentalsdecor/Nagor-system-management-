@@ -67,7 +67,7 @@ export default function App() {
     const init = async () => {
       try {
         await initializeData();
-        await seedDatabase();
+        // await seedDatabase(); // Disabled seeding to prevent mock data from returning
 
         // Check for existing session
         const employeeData = sessionStorage.getItem('currentEmployee');

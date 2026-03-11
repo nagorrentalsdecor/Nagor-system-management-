@@ -290,6 +290,35 @@ const transformLogFromDB = (l: any): AuditLog => ({
 });
 
 
+// --- Storage Functions ---
+export const uploadImage = async (bucket: string, path: string, base64Data: string): Promise<string | null> => {
+  try {
+    // Convert base64 to Blob
+    const response = await fetch(base64Data);
+    const blob = await response.blob();
+    
+    const fileName = `${path}-${Date.now()}.jpg`;
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .upload(fileName, blob, {
+        contentType: 'image/jpeg',
+        upsert: true
+      });
+
+    if (error) throw error;
+
+    // Get Public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(data.path);
+
+    return publicUrl;
+  } catch (error) {
+    console.error(`Error uploading to ${bucket}:`, error);
+    return null;
+  }
+};
+
 // --- Getters (Using Cache) ---
 export const getItems = (): Item[] => cache.items;
 export const getCustomers = (): Customer[] => cache.customers;
@@ -309,6 +338,17 @@ export const saveItems = async (items: Item[]) => {
 
   try {
     for (const i of items) {
+      let finalImageUrl = i.imageUrl;
+
+      // Check if image is a base64 string (needs upload)
+      if (i.imageUrl && i.imageUrl.startsWith('data:image')) {
+        const uploadedUrl = await uploadImage('inventory', `asset-${i.id || 'new'}`, i.imageUrl);
+        if (uploadedUrl) {
+          finalImageUrl = uploadedUrl;
+          i.imageUrl = uploadedUrl; // Update local ref too
+        }
+      }
+
       const payload: any = {
         name: i.name,
         category: i.category,
@@ -317,11 +357,10 @@ export const saveItems = async (items: Item[]) => {
         quantity_in_maintenance: i.quantityInMaintenance,
         price: i.price,
         status: i.status,
-        image_url: i.imageUrl
+        image_url: finalImageUrl
       };
 
       // CRITICAL: Only include ID if it looks like a valid UUID
-      // If the ID is a temp short ID, we let Supabase generate one and update it locally
       if (i.id && i.id.includes('-') && i.id.length > 20) {
         payload.id = i.id;
       }
@@ -329,11 +368,7 @@ export const saveItems = async (items: Item[]) => {
       const { data, error } = await supabase.from('items').upsert(payload, { onConflict: 'id' }).select().single();
 
       if (data && data.id !== i.id) {
-        // Update the item in our cache with the new real ID
-        const oldId = i.id;
         i.id = data.id;
-        // Also update any references in other cache tables if necessary? 
-        // For now, this item object is already updated in cache.items because we shared reference
       }
 
       if (error) console.error("Error upserting item:", error);
@@ -837,127 +872,25 @@ export const getApprovedTransactions = (): Transaction[] => {
 };
 
 export const seedDatabase = async () => {
-  // Only seed if empty
-  if (cache.items.length === 0) {
-    console.log("Seeding Supabase Database: Items...");
-    const sampleItems = [
-      { name: 'Gold Phoenix Chair', category: 'Chairs', total_quantity: 200, price: 15, status: 'AVAILABLE', quantity_in_maintenance: 0 },
-      { name: 'White Dior Chair', category: 'Chairs', total_quantity: 150, price: 25, status: 'AVAILABLE', quantity_in_maintenance: 0 },
-      { name: 'Plastic Armless Chair', category: 'Chairs', total_quantity: 500, price: 2, status: 'AVAILABLE', quantity_in_maintenance: 0 },
-      { name: 'Round Table (10-seater)', category: 'Tables', total_quantity: 50, price: 40, status: 'AVAILABLE', quantity_in_maintenance: 0 },
-      { name: 'Rectangular Table (6ft)', category: 'Tables', total_quantity: 30, price: 30, status: 'AVAILABLE', quantity_in_maintenance: 0 },
-      { name: 'Marquee Tent (High Peak)', category: 'Tents', total_quantity: 5, price: 1500, status: 'AVAILABLE', quantity_in_maintenance: 0 },
-      { name: 'Standard Canopy', category: 'Tents', total_quantity: 10, price: 200, status: 'AVAILABLE', quantity_in_maintenance: 0 },
-      { name: 'Artificial Grass (Roll)', category: 'Flooring', total_quantity: 20, price: 100, status: 'AVAILABLE', quantity_in_maintenance: 0 }
-    ];
-
-    const { error } = await supabase.from('items').insert(sampleItems);
-    if (error) {
-      console.error("Error seeding items (Offline Mode?):", error);
-      // Fallback: Load sample data into cache for offline testing
-      console.log("Loading offline sample items...");
-      cache.items = sampleItems.map(i => ({
-        id: 'offline-' + Math.random().toString(36).substr(2, 9),
-        name: i.name,
-        category: i.category as string,
-        totalQuantity: i.total_quantity,
-        price: i.price,
-        status: i.status as ItemStatus,
-        quantityInMaintenance: i.quantity_in_maintenance,
-        imageUrl: 'https://placehold.co/400x300?text=' + encodeURIComponent(i.name)
-      }));
-    } else {
-      // Refresh cache
-      const { data } = await supabase.from('items').select('*');
-      if (data) cache.items = data.map(transformItemFromDB);
-      console.log("Items seeded successfully");
-    }
-  }
-
-  if (cache.customers.length === 0) {
-    console.log("Seeding Supabase Database: Customers...");
-    const sampleCustomers = [
-      { name: 'Event Pro GH', phone: '0555000000', email: 'contact@eventpro.gh', total_rentals: 5 },
-      { name: 'Alice Weddings', phone: '0200000001', email: 'alice@weddings.com', total_rentals: 2 },
-      { name: 'Corporate Events Ltd', phone: '0244000000', email: 'events@corporate.com', total_rentals: 10, is_blacklisted: false }
-    ];
-
-    const { error } = await supabase.from('customers').insert(sampleCustomers);
-    if (error) {
-      console.error("Error seeding customers (Offline Mode?):", error);
-      // Fallback: Load sample data into cache for offline testing
-      console.log("Loading offline sample customers...");
-      cache.customers = sampleCustomers.map(c => ({
-        id: 'offline-' + Math.random().toString(36).substr(2, 9),
-        name: c.name,
-        phone: c.phone,
-        email: c.email,
-        totalRentals: c.total_rentals,
-        isBlacklisted: false,
-        riskNotes: '',
-        loyaltyPoints: 0,
-        createdAt: new Date().toISOString()
-      }));
-    } else {
-      const { data } = await supabase.from('customers').select('*');
-      if (data) cache.customers = data.map(transformCustomerFromDB);
-      console.log("Customers seeded successfully");
-    }
-  }
-
-  // Seed Employees
+  // --- SEEDING DISABLED FOR PRODUCTION ---
+  // We only keep employee seeding to ensure there's always an admin path if the DB is wiped.
+  
+  // Seed Employees (Only if absolutely no employees exist)
   if (cache.employees.length === 0) {
-    console.log("Seeding Supabase Database: Employees...");
-    const sampleEmployees = [
+    console.log("Seeding Initial Admin Account...");
+    const initialAdmin = [
       {
         name: 'System Admin', username: 'admin', password: 'password123', role: UserRole.ADMIN,
-        phone: '050-000-0000', salary: 5000, join_date: new Date().toISOString(), status: 'ACTIVE',
-        has_system_access: true, is_first_login: false
-      },
-      {
-        name: 'Sarah Manager', username: 'manager', password: 'password123', role: UserRole.MANAGER,
-        phone: '050-000-0001', salary: 4000, join_date: new Date().toISOString(), status: 'ACTIVE',
-        has_system_access: true, is_first_login: false
-      },
-      {
-        name: 'John Staff', username: 'staff', password: 'password123', role: UserRole.SALES,
-        phone: '050-000-0002', salary: 2000, join_date: new Date().toISOString(), status: 'ACTIVE',
-        has_system_access: true, is_first_login: false
-      },
-      {
-        name: 'Finance Officer', username: 'finance', password: 'password123', role: UserRole.FINANCE,
-        phone: '050-000-0003', salary: 3500, join_date: new Date().toISOString(), status: 'ACTIVE',
+        phone: '050-000-0000', salary: 0, join_date: new Date().toISOString(), status: 'ACTIVE',
         has_system_access: true, is_first_login: false
       }
     ];
 
-    const { error } = await supabase.from('employees').insert(sampleEmployees);
-    if (error) {
-      console.error("Error seeding employees (Offline Mode?):", error);
-      // Fallback for offline mode
-      console.log("Loading offline sample employees...");
-      cache.employees = sampleEmployees.map((e, idx) => ({
-        id: 'offline-emp-' + idx,
-        name: e.name,
-        username: e.username,
-        // Note: Password is not stored in cache for security in real app, but here we don't need it for display
-        role: e.role,
-        phone: e.phone,
-        salary: e.salary,
-        joinDate: e.join_date,
-        status: EmployeeStatus.ACTIVE,
-        loanBalance: 0,
-        pendingDeductions: 0,
-        leaveBalance: 0,
-        performanceRating: 5,
-        hasSystemAccess: e.has_system_access,
-        isFirstLogin: false,
-        passwordChangeRequired: false
-      }));
-    } else {
+    const { error } = await supabase.from('employees').insert(initialAdmin);
+    if (!error) {
       const { data } = await supabase.from('employees').select('*');
       if (data) cache.employees = data.map(transformEmployeeFromDB);
-      console.log("Employees seeded successfully");
+      console.log("Admin account initialized.");
     }
   }
 };
