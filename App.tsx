@@ -65,9 +65,16 @@ export default function App() {
   useEffect(() => {
     // Initialize mock DB & Supabase Cache
     const init = async () => {
+      // Rescue timeout: If it takes more than 8 seconds, force the app to show the login
+      const rescueTimer = setTimeout(() => {
+        if (loading) {
+          console.warn("Initialization taking too long, forcing load completion.");
+          setLoading(false);
+        }
+      }, 8000);
+
       try {
         await initializeData();
-        // await seedDatabase(); // Disabled seeding to prevent mock data from returning
 
         // Check for existing session
         const employeeData = sessionStorage.getItem('currentEmployee');
@@ -82,6 +89,7 @@ export default function App() {
       } catch (err) {
         console.error("Initialization Failed:", err);
       } finally {
+        clearTimeout(rescueTimer);
         setLoading(false);
       }
     };

@@ -34,28 +34,38 @@ export const initializeData = async () => {
   console.log("Initializing Supabase Data Sync...");
 
   try {
-    const [items, customers, bookings, transactions, employees, settings, logs, payrolls] = await Promise.all([
-      supabase.from('items').select('*'),
-      supabase.from('customers').select('*'),
-      supabase.from('bookings').select(`*, items:booking_items(*), penalties(*)`), // Fetch related BookingItems and Penalties
-      supabase.from('transactions').select('*'),
-      supabase.from('employees').select('*'),
-      supabase.from('settings').select('*'),
-      supabase.from('audit_logs').select('*').order('timestamp', { ascending: false }).limit(500),
-      supabase.from('payroll_runs').select('*')
+    const fetchTable = async (table: string, query: any) => {
+      console.log(`Fetching ${table}...`);
+      const { data, error } = await query;
+      if (error) {
+        console.error(`Error fetching ${table}:`, error);
+        return null;
+      }
+      return data;
+    };
+
+    const [itemsData, customersData, bookingsData, transactionsData, employeesData, settingsData, logsData, payrollsData] = await Promise.all([
+      fetchTable('items', supabase.from('items').select('*')),
+      fetchTable('customers', supabase.from('customers').select('*')),
+      fetchTable('bookings', supabase.from('bookings').select(`*, items:booking_items(*), penalties(*)`)),
+      fetchTable('transactions', supabase.from('transactions').select('*')),
+      fetchTable('employees', supabase.from('employees').select('*')),
+      fetchTable('settings', supabase.from('settings').select('*')),
+      fetchTable('audit_logs', supabase.from('audit_logs').select('*').order('timestamp', { ascending: false }).limit(200)),
+      fetchTable('payroll_runs', supabase.from('payroll_runs').select('*'))
     ]);
 
     // Map data for each table safely
-    if (items.data) cache.items = items.data.map(transformItemFromDB);
-    if (customers.data) cache.customers = customers.data.map(transformCustomerFromDB);
-    if (employees.data) cache.employees = employees.data.map(transformEmployeeFromDB);
-    if (transactions.data) cache.transactions = transactions.data.map(transformTransactionFromDB);
-    if (settings.data) cache.settings = settings.data;
-    if (logs.data) cache.logs = logs.data.map(transformLogFromDB);
+    if (itemsData) cache.items = itemsData.map(transformItemFromDB);
+    if (customersData) cache.customers = customersData.map(transformCustomerFromDB);
+    if (employeesData) cache.employees = employeesData.map(transformEmployeeFromDB);
+    if (transactionsData) cache.transactions = transactionsData.map(transformTransactionFromDB);
+    if (settingsData) cache.settings = settingsData;
+    if (logsData) cache.logs = logsData.map(transformLogFromDB);
 
     // Safe JSON parsing for payrolls
-    if (payrolls.data) {
-      cache.payrollRuns = payrolls.data.map(p => {
+    if (payrollsData) {
+      cache.payrollRuns = payrollsData.map((p: any) => {
         let itemsField = [];
         try {
           itemsField = typeof p.items === 'string' ? JSON.parse(p.items) : (p.items || []);
@@ -67,8 +77,8 @@ export const initializeData = async () => {
     }
 
     // Complex transform for Bookings with safety checks
-    if (bookings.data) {
-      cache.bookings = bookings.data.map((b: any) => {
+    if (bookingsData) {
+      cache.bookings = bookingsData.map((b: any) => {
         try {
           return {
             id: b.id,
