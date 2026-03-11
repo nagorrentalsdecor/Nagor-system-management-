@@ -385,26 +385,58 @@ export const deleteItem = async (itemId: string) => {
   // Persist
   try {
     const { error } = await supabase.from('items').delete().eq('id', itemId);
-    if (error) throw error;
-  } catch (e) {
+    if (error) {
+      if (error.code === '23503') {
+        throw new Error("Cannot delete item that is referenced by existing bookings. Set it to 'Maintenance' or 'Damaged' instead.");
+      }
+      throw error;
+    }
+  } catch (e: any) {
     console.error("Delete Item Error", e);
-    // Ideally restore cache? 
+    isInitialized = false;
+    await initializeData();
+    throw e;
   }
 };
 
 export const saveCustomers = async (customers: Customer[]) => {
   cache.customers = customers;
-  for (const c of customers) {
-    const payload: any = {
-      name: c.name, phone: c.phone, address: c.address, email: c.email,
-      notes: c.notes, total_rentals: c.totalRentals, id_card_url: c.idCardUrl,
-      guarantor_name: c.guarantorName, guarantor_phone: c.guarantorPhone,
-      is_blacklisted: c.isBlacklisted, risk_notes: c.riskNotes
-    };
-    if (c.id && c.id.includes('-') && c.id.length > 20) payload.id = c.id;
+  try {
+    for (const c of customers) {
+      const payload: any = {
+        name: c.name, phone: c.phone, address: c.address, email: c.email,
+        notes: c.notes, total_rentals: c.totalRentals, id_card_url: c.idCardUrl,
+        guarantor_name: c.guarantorName, guarantor_phone: c.guarantorPhone,
+        is_blacklisted: c.isBlacklisted, risk_notes: c.riskNotes
+      };
+      if (c.id && c.id.includes('-') && c.id.length > 20) payload.id = c.id;
 
-    const { data } = await supabase.from('customers').upsert(payload, { onConflict: 'id' }).select().single();
-    if (data && data.id !== c.id) c.id = data.id;
+      const { data } = await supabase.from('customers').upsert(payload, { onConflict: 'id' }).select().single();
+      if (data && data.id !== c.id) c.id = data.id;
+    }
+  } catch (e) {
+    console.error("Save Customers Error", e);
+  }
+};
+
+export const deleteCustomer = async (customerId: string) => {
+  // Optimistic Update
+  cache.customers = cache.customers.filter(c => c.id !== customerId);
+
+  try {
+    const { error } = await supabase.from('customers').delete().eq('id', customerId);
+    if (error) {
+      if (error.code === '23503') {
+        throw new Error("Cannot delete customer with active booking history. Archive them instead.");
+      }
+      throw error;
+    }
+  } catch (e: any) {
+    console.error("Delete Customer Error", e);
+    // Re-initialize to restore cache on failure
+    isInitialized = false;
+    await initializeData();
+    throw e;
   }
 };
 
@@ -458,6 +490,27 @@ export const saveBookings = async (bookings: Booking[]) => {
         await supabase.from('penalties').insert(penaltyPayload);
       }
     }
+  }
+};
+
+export const deleteBooking = async (bookingId: string) => {
+  // Optimistic Update
+  cache.bookings = cache.bookings.filter(b => b.id !== bookingId);
+
+  try {
+    // Child records (booking_items, penalties) are deleted via CASCADE in DB if configured, 
+    // but we'll do it manually just in case to be safe.
+    await supabase.from('booking_items').delete().eq('booking_id', bookingId);
+    await supabase.from('penalties').delete().eq('booking_id', bookingId);
+    await supabase.from('transactions').delete().eq('booking_id', bookingId);
+    
+    const { error } = await supabase.from('bookings').delete().eq('id', bookingId);
+    if (error) throw error;
+  } catch (e) {
+    console.error("Delete Booking Error", e);
+    isInitialized = false;
+    await initializeData();
+    throw e;
   }
 };
 
@@ -898,38 +951,52 @@ export const seedDatabase = async () => {
 export const exportDatabase = () => JSON.stringify(cache);
 export const importDatabase = (json: string) => false; // Disabled for cloud sync safety
 
-export const clearProductionData = async () => {
-  console.log("Purging test data for production launch...");
-
+export const clearActivityData = async () => {
+  console.log("Purging activity records...");
   try {
-    // 1. Transactions - Using filter to target all records
     await supabase.from('transactions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    // 2. Penalties & Booking Items (Child records)
     await supabase.from('penalties').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     await supabase.from('booking_items').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    // 3. Bookings
     await supabase.from('bookings').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    // 4. Payroll
     await supabase.from('payroll_runs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    // 5. Audit Logs
     await supabase.from('audit_logs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
 
-    // Update Local Cache
     cache.bookings = [];
     cache.transactions = [];
     cache.payrollRuns = [];
     cache.logs = [];
-
-    console.log("Database purge complete.");
     return true;
   } catch (err) {
-    console.error("Purge Error:", err);
+    console.error("Activity Purge Error:", err);
     throw err;
   }
 };
 
+export const clearAllData = async () => {
+  console.log("HARD RESET: Deleting all system data...");
+  try {
+    // 1. Activity First (to clear FK references)
+    await clearActivityData();
+
+    // 2. Entities
+    await supabase.from('items').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('customers').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+
+    cache.items = [];
+    cache.customers = [];
+    return true;
+  } catch (err) {
+    console.error("Hard Reset Error:", err);
+    throw err;
+  }
+};
+
+export const clearProductionData = async () => {
+  return clearActivityData();
+};
+
 export const clearDatabase = () => {
-  return clearProductionData();
+  return clearAllData();
 };
 
 // --- UUID Helper ---

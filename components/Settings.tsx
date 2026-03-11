@@ -27,7 +27,7 @@ import {
   UserPlus,
   MoreVertical
 } from 'lucide-react';
-import { getEmployees, getSettings, saveSettings, saveEmployees, getAuditLogs, createAuditLog, exportDatabase, importDatabase, clearDatabase, seedDatabase } from '../services/db';
+import { getEmployees, getSettings, saveSettings, saveEmployees, getAuditLogs, createAuditLog, exportDatabase, importDatabase, clearDatabase, seedDatabase, clearProductionData } from '../services/db';
 import { AuditLog, Employee, EmployeeStatus } from '../types';
 
 type SettingSection = 'general' | 'users' | 'notifications' | 'billing' | 'invoices' | 'team' | 'logs' | 'data';
@@ -400,7 +400,7 @@ export const Settings = () => {
     if (window.confirm('PRODUCTION PROTOCOL: This will permanently delete all TEST Bookings, Transactions, Payroll, and Audit Logs.\n\nInventory, Employees, and Settings will be PRESERVED.\n\nAre you ready to launch productively?')) {
       if (window.confirm('FINAL CONFIRMATION: Purge all activity records?')) {
         try {
-          await clearDatabase();
+          await clearProductionData();
           alert('System purged successfully! All test records have been removed. The system is now ready for production. Reloading...');
           window.location.reload();
         } catch (err) {

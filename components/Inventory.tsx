@@ -181,14 +181,19 @@ export const Inventory = () => {
     toastService.success(editingItem ? "Asset updated successfully." : "New asset registered successfully.");
   };
 
-  const deleteItem = (id: string, e?: React.MouseEvent) => {
+  const deleteItem = async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (window.confirm('Are you sure you want to delete this asset?')) {
-      deleteItemFromDb(id);
-      const updated = items.filter(i => i.id !== id);
-      setItems(updated);
-      createAuditLog('DELETE_ASSET', `Deleted asset: ${items.find(i => i.id === id)?.name}`);
-      closeModal();
+      try {
+        await deleteItemFromDb(id);
+        const updated = items.filter(i => i.id !== id);
+        setItems(updated);
+        createAuditLog('DELETE_ASSET', `Deleted asset: ${items.find(i => i.id === id)?.name}`);
+        toastService.success("Asset purged successfully.");
+        closeModal();
+      } catch (err: any) {
+        toastService.error(err.message || "Failed to purge asset.");
+      }
     }
   };
 

@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Customer, Booking } from '../types';
-import { getCustomers, saveCustomers, getBookings, createAuditLog } from '../services/db';
+import { getCustomers, saveCustomers, getBookings, createAuditLog, deleteCustomer as deleteCustomerFromDb } from '../services/db';
 import { toastService } from '../services/toast';
 import { ImageCapture } from './ImageCapture';
 
@@ -213,13 +213,18 @@ export const Customers = () => {
     toastService.success(editingCustomer ? "Partner profile updated." : "New partner onboarded successfully.");
   };
 
-  const deleteCustomer = (id: string, e: React.MouseEvent) => {
+  const deleteCustomer = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (window.confirm('Archive this client? All history will be preserved.')) {
-      const updated = customers.filter(c => c.id !== id);
-      saveCustomers(updated);
-      setCustomers(updated);
-      createAuditLog('DELETE_CUSTOMER', `Archived partner: ${customers.find(c => c.id === id)?.name}`);
+    if (window.confirm('Delete this partner? This will permanently remove them from the database.')) {
+      try {
+        await deleteCustomerFromDb(id);
+        const updated = customers.filter(c => c.id !== id);
+        setCustomers(updated);
+        createAuditLog('DELETE_CUSTOMER', `Archived partner: ${customers.find(c => c.id === id)?.name}`);
+        toastService.success("Partner deleted successfully.");
+      } catch (err: any) {
+        toastService.error(err.message || "Failed to delete partner.");
+      }
     }
   };
 
