@@ -34,86 +34,74 @@ export const initializeData = async () => {
   console.log("Initializing Supabase Data Sync...");
 
   try {
-    const fetchTable = async (table: string, query: any) => {
-      console.log(`Fetching ${table}...`);
+    const fetchTableSync = async (table: string, query: any, transform: (d: any) => any, cacheField: keyof typeof cache) => {
+      console.log(`Syncing ${table}...`);
       const { data, error } = await query;
       if (error) {
-        console.error(`Error fetching ${table}:`, error);
-        return null;
+        console.error(`Error syncing ${table}:`, error);
+      } else if (data) {
+        if (Array.isArray(data)) {
+          (cache as any)[cacheField] = data.map(transform);
+        } else {
+          (cache as any)[cacheField] = transform(data);
+        }
+        // Dispatch event immediately after each table loads
+        window.dispatchEvent(new CustomEvent('db-sync', { detail: { table } }));
       }
-      return data;
     };
 
-    const [itemsData, customersData, bookingsData, transactionsData, employeesData, settingsData, logsData, payrollsData] = await Promise.all([
-      fetchTable('items', supabase.from('items').select('*')),
-      fetchTable('customers', supabase.from('customers').select('*')),
-      fetchTable('bookings', supabase.from('bookings').select(`*, items:booking_items(*), penalties(*)`)),
-      fetchTable('transactions', supabase.from('transactions').select('*')),
-      fetchTable('employees', supabase.from('employees').select('*')),
-      fetchTable('settings', supabase.from('settings').select('*')),
-      fetchTable('audit_logs', supabase.from('audit_logs').select('*').order('timestamp', { ascending: false }).limit(200)),
-      fetchTable('payroll_runs', supabase.from('payroll_runs').select('*'))
-    ]);
-
-    // Map data for each table safely
-    if (itemsData) cache.items = itemsData.map(transformItemFromDB);
-    if (customersData) cache.customers = customersData.map(transformCustomerFromDB);
-    if (employeesData) cache.employees = employeesData.map(transformEmployeeFromDB);
-    if (transactionsData) cache.transactions = transactionsData.map(transformTransactionFromDB);
-    if (settingsData) cache.settings = settingsData;
-    if (logsData) cache.logs = logsData.map(transformLogFromDB);
-
-    // Safe JSON parsing for payrolls
-    if (payrollsData) {
-      cache.payrollRuns = payrollsData.map((p: any) => {
-        let itemsField = [];
+    // Sequential but immediate updates for critical tables first
+    await fetchTableSync('items', supabase.from('items').select('*'), transformItemFromDB, 'items');
+    await fetchTableSync('customers', supabase.from('customers').select('*'), transformCustomerFromDB, 'customers');
+    
+    // Non-blocking for less critical tables
+    const nonCritical = [
+      fetchTableSync('employees', supabase.from('employees').select('*'), transformEmployeeFromDB, 'employees'),
+      fetchTableSync('settings', supabase.from('settings').select('*'), (d) => d, 'settings'),
+      fetchTableSync('payroll_runs', supabase.from('payroll_runs').select('*'), (p) => {
         try {
-          itemsField = typeof p.items === 'string' ? JSON.parse(p.items) : (p.items || []);
-        } catch (e) {
-          console.warn("Malformed payroll items safely ignored", p.id);
-        }
-        return { ...p, items: itemsField };
-      });
-    }
+          const itemsField = typeof p.items === 'string' ? JSON.parse(p.items) : (p.items || []);
+          return { ...p, items: itemsField };
+        } catch (e) { return p; }
+      }, 'payrollRuns'),
+      fetchTableSync('audit_logs', supabase.from('audit_logs').select('*').order('timestamp', { ascending: false }).limit(100), transformLogFromDB, 'logs')
+    ];
 
-    // Complex transform for Bookings with safety checks
-    if (bookingsData) {
-      cache.bookings = bookingsData.map((b: any) => {
-        try {
-          return {
-            id: b.id,
-            customerId: b.customer_id,
-            customerName: b.customer_name || 'Anonymous Partner',
-            startDate: b.start_date,
-            endDate: b.end_date,
-            status: b.status as BookingStatus,
-            totalAmount: b.total_amount || 0,
-            paidAmount: b.paid_amount || 0,
-            lateFee: b.late_fee || 0,
-            notes: b.notes || '',
-            createdAt: b.created_at,
-            items: Array.isArray(b.items) ? b.items.map((bi: any) => ({
-              itemId: bi.item_id,
-              itemName: bi.item_name || 'Unknown Asset',
-              quantity: bi.quantity || 0,
-              priceAtBooking: bi.price_at_booking || 0
-            })) : [],
-            penalties: Array.isArray(b.penalties) ? b.penalties.map((p: any) => ({
-              type: p.type,
-              amount: p.amount || 0,
-              description: p.description || '',
-              date: p.date
-            })) : []
-          };
-        } catch (err) {
-          console.error("Critical error transforming booking:", b.id, err);
-          return null;
-        }
-      }).filter((b: any) => b !== null);
-    }
+    // Bookings has complex transform, handle separately
+    supabase.from('bookings').select(`*, items:booking_items(*), penalties(*)`).then(({ data, error }) => {
+      if (data) {
+        cache.bookings = data.map((b: any) => {
+          try {
+            return {
+              id: b.id, customerId: b.customer_id, customerName: b.customer_name || 'Anonymous Partner',
+              startDate: b.start_date, endDate: b.end_date, status: b.status as BookingStatus,
+              totalAmount: b.total_amount || 0, paidAmount: b.paid_amount || 0, lateFee: b.late_fee || 0,
+              notes: b.notes || '', createdAt: b.created_at,
+              items: Array.isArray(b.items) ? b.items.map((bi: any) => ({
+                itemId: bi.item_id, itemName: bi.item_name || 'Unknown Asset', quantity: bi.quantity || 0, priceAtBooking: bi.price_at_booking || 0
+              })) : [],
+              penalties: Array.isArray(b.penalties) ? b.penalties.map((p: any) => ({
+                type: p.type, amount: p.amount || 0, description: p.description || '', date: p.date
+              })) : []
+            };
+          } catch(e) { return null; }
+        }).filter(b => b !== null);
+        window.dispatchEvent(new CustomEvent('db-sync', { detail: { table: 'bookings' } }));
+      }
+    });
 
+    // Transactions
+    supabase.from('transactions').select('*').then(({ data }) => {
+      if (data) {
+        cache.transactions = data.map(transformTransactionFromDB);
+        window.dispatchEvent(new CustomEvent('db-sync', { detail: { table: 'transactions' } }));
+      }
+    });
+
+    await Promise.all(nonCritical);
+    
     isInitialized = true;
-    console.log("Supabase Data Synchronization Finalized");
+    console.log("Supabase Data Synchronization Stream Finalized");
     setupRealtimeListeners();
   } catch (error) {
     console.error("Critical: Failed to load data from Supabase", error);
